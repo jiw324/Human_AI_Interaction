@@ -16,14 +16,18 @@
 .chat-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 15px;
   padding: 20px;
   background: #f8f9fa;
   border-bottom: 1px solid #e5e7eb;
 }
 
 .ai-avatar {
-  margin-right: 15px;
+  flex-shrink: 0;
+}
+
+.chat-title {
+  flex: 1;
 }
 
 .avatar-icon {
@@ -48,6 +52,31 @@
   color: #6b7280;
   font-size: 14px;
   font-weight: 400;
+}
+
+.new-chat-btn {
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+  flex-shrink: 0;
+}
+
+.new-chat-btn:hover {
+  background: #059669;
+  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+  transform: translateY(-1px);
+}
+
+.new-chat-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(16, 185, 129, 0.2);
 }
 
 .history-btn {

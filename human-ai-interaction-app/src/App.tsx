@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Routes, Route, NavLink, useNavigate, Navigate } from 'react-router-dom'
 import ChatBox from './components/ChatBox'
 import ResearchPanel from './components/ResearchPanel'
@@ -113,7 +113,7 @@ function App() {
     }
   }, []);
 
-  const handleSaveConversation = (conversation: Conversation) => {
+  const handleSaveConversation = useCallback((conversation: Conversation) => {
     setConversations(prev => {
       const existingIndex = prev.findIndex(conv => conv.id === conversation.id);
       let updated;
@@ -127,7 +127,7 @@ function App() {
       localStorage.setItem('conversations', JSON.stringify(updated));
       return updated;
     });
-  };
+  }, []);
 
   const navigate = useNavigate();
 
@@ -143,10 +143,6 @@ function App() {
       localStorage.setItem('conversations', JSON.stringify(updated));
       return updated;
     });
-  };
-
-  const handleShowHistory = () => {
-    navigate('/history');
   };
 
   const handleLogin = (researchKey: string) => {
@@ -224,7 +220,6 @@ function App() {
                 <ChatBox 
                   aiSettingsByModel={aiSettingsByModel}
                   onSaveConversation={handleSaveConversation}
-                  onShowHistory={handleShowHistory}
                 />
               </div>
             } 

@@ -38,7 +38,6 @@ interface Conversation {
 interface ChatBoxProps {
   aiSettingsByModel: Record<string, AISettings>;
   onSaveConversation: (conversation: Conversation) => void;
-  onShowHistory: () => void;
 }
 
 const ChatBox: React.FC<ChatBoxProps> = ({ aiSettingsByModel, onSaveConversation }) => {
@@ -70,23 +69,62 @@ const ChatBox: React.FC<ChatBoxProps> = ({ aiSettingsByModel, onSaveConversation
     }
   ];
 
-  // Randomly select one AI model
+  // Load or initialize conversation from localStorage
   const [selectedModel] = useState(() => {
+    const savedChat = localStorage.getItem('currentChat');
+    if (savedChat) {
+      try {
+        const parsed = JSON.parse(savedChat);
+        return parsed.aiModel;
+      } catch (error) {
+        console.error('Error parsing saved chat:', error);
+      }
+    }
     const randomIndex = Math.floor(Math.random() * aiModels.length);
     return aiModels[randomIndex];
   });
 
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      text: selectedModel.greeting,
-      sender: 'ai',
-      timestamp: new Date()
+  const [conversationId] = useState(() => {
+    const savedChat = localStorage.getItem('currentChat');
+    if (savedChat) {
+      try {
+        const parsed = JSON.parse(savedChat);
+        return parsed.id;
+      } catch (error) {
+        console.error('Error parsing saved chat:', error);
+      }
     }
-  ]);
+    return Date.now().toString();
+  });
+
+  const [messages, setMessages] = useState<Message[]>(() => {
+    const savedChat = localStorage.getItem('currentChat');
+    if (savedChat) {
+      try {
+        const parsed = JSON.parse(savedChat);
+        // Convert date strings back to Date objects
+        const messagesWithDates = parsed.messages.map((msg: any) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp)
+        }));
+        return messagesWithDates;
+      } catch (error) {
+        console.error('Error parsing saved chat:', error);
+      }
+    }
+    // Default greeting message
+    return [
+      {
+        id: '1',
+        text: selectedModel.greeting,
+        sender: 'ai' as const,
+        timestamp: new Date()
+      }
+    ];
+  });
+
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [conversationId] = useState(() => Date.now().toString());
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Get settings for the selected model
@@ -100,7 +138,20 @@ const ChatBox: React.FC<ChatBoxProps> = ({ aiSettingsByModel, onSaveConversation
     scrollToBottom();
   }, [messages]);
 
-  // Save conversation whenever messages change
+  // Save current chat to localStorage whenever messages change
+  useEffect(() => {
+    const conversation = {
+      id: conversationId,
+      title: `Chat with ${selectedModel.name}`,
+      aiModel: selectedModel,
+      messages: messages,
+      createdAt: messages[0].timestamp,
+      lastMessageAt: messages[messages.length - 1].timestamp
+    };
+    localStorage.setItem('currentChat', JSON.stringify(conversation));
+  }, [messages, conversationId, selectedModel]);
+
+  // Save conversation to history whenever messages change
   useEffect(() => {
     if (messages.length > 1) { // Only save if there are actual messages beyond the greeting
       const conversation: Conversation = {
@@ -215,6 +266,13 @@ const ChatBox: React.FC<ChatBoxProps> = ({ aiSettingsByModel, onSaveConversation
     }
   };
 
+  const handleNewChat = () => {
+    // Clear current chat from localStorage
+    localStorage.removeItem('currentChat');
+    // Reload the page to start fresh
+    window.location.reload();
+  };
+
   return (
     <div className="chat-container">
       <div className="chat-header">
@@ -225,6 +283,13 @@ const ChatBox: React.FC<ChatBoxProps> = ({ aiSettingsByModel, onSaveConversation
           <h3>{selectedModel.name}</h3>
           <span className="status">Online • {selectedModel.personality}</span>
         </div>
+        <button 
+          onClick={handleNewChat}
+          className="new-chat-btn"
+          title="Start a new chat"
+        >
+          + New Chat
+        </button>
       </div>
       
       <div className="chat-messages">
