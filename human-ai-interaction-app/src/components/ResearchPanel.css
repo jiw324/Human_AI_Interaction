@@ -216,6 +216,7 @@
 .setting-textarea {
   resize: vertical;
   min-height: 100px;
+  color: #1f2937;
 }
 
 .import-export-section {
