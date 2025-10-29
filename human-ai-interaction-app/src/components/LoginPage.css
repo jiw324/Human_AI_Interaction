@@ -40,7 +40,7 @@
   align-items: center;
   min-height: 100vh;
   padding: 20px;
-  margin: 0;
+  margin: -150px 0 0 0;
 }
 
 .login-card {
