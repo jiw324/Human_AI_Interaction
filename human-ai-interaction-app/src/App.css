@@ -22,6 +22,8 @@
   cursor: pointer;
   transition: all 0.2s ease;
   color: #6b7280;
+  text-decoration: none;
+  display: inline-block;
 }
 
 .nav-btn:hover {
@@ -35,9 +37,25 @@
   border-color: #3b82f6;
 }
 
+.logout-btn {
+  background: #dc2626;
+  color: white;
+  border-color: #dc2626;
+}
+
+.logout-btn:hover {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+
 .main-content {
   padding: 20px;
   min-height: 400px;
+}
+
+.main-content:has(.login-page) {
+  padding: 0;
+  margin: 0;
 }
 
 .chat-section {

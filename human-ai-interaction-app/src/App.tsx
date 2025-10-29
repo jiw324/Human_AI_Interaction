@@ -1,7 +1,9 @@
 import { useState } from 'react'
+import { Routes, Route, NavLink, useNavigate, Navigate } from 'react-router-dom'
 import ChatBox from './components/ChatBox'
 import ResearchPanel from './components/ResearchPanel'
 import ConversationHistory from './components/ConversationHistory'
+import LoginPage from './components/LoginPage'
 import './App.css'
 
 interface AISettings {
@@ -39,7 +41,10 @@ interface Conversation {
 }
 
 function App() {
-  const [currentView, setCurrentView] = useState<'chat' | 'research' | 'history'>('chat');
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
+    // Check if user is logged in from localStorage
+    return localStorage.getItem('researchLoggedIn') === 'true';
+  });
   const [conversations, setConversations] = useState<Conversation[]>([]);
 
   const modelNames: string[] = ['Task 1', 'Task 2', 'Task 3', 'Task 4'];
@@ -79,8 +84,10 @@ function App() {
     });
   };
 
+  const navigate = useNavigate();
+
   const handleLoadConversation = (conversation: Conversation) => {
-    setCurrentView('chat');
+    navigate('/');
     console.log('Loading conversation:', conversation);
   };
 
@@ -89,58 +96,127 @@ function App() {
   };
 
   const handleShowHistory = () => {
-    setCurrentView('history');
+    navigate('/history');
+  };
+
+  const handleLogin = (researchKey: string) => {
+    setIsLoggedIn(true);
+    localStorage.setItem('researchLoggedIn', 'true');
+    localStorage.setItem('researchKey', researchKey);
+    navigate('/research');
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    localStorage.removeItem('researchLoggedIn');
+    localStorage.removeItem('researchKey');
+    navigate('/');
+  };
+
+  const handleBackToHome = () => {
+    navigate('/');
+  };
+
+  // Protected route component
+  const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+    if (!isLoggedIn) {
+      return <Navigate to="/login" replace />;
+    }
+    return <>{children}</>;
   };
 
   return (
     <div className="app">
       <div className="simple-nav">
-        <button 
-          className={`nav-btn ${currentView === 'chat' ? 'active' : ''}`}
-          onClick={() => setCurrentView('chat')}
+        <NavLink 
+          to="/"
+          className={({ isActive }) => `nav-btn ${isActive ? 'active' : ''}`}
         >
           Chat
-        </button>
-        <button 
-          className={`nav-btn ${currentView === 'research' ? 'active' : ''}`}
-          onClick={() => setCurrentView('research')}
-        >
-          Research
-        </button>
-        <button 
-          className={`nav-btn ${currentView === 'history' ? 'active' : ''}`}
-          onClick={() => setCurrentView('history')}
-        >
-          History
-        </button>
+        </NavLink>
+        {isLoggedIn ? (
+          <>
+            <NavLink 
+              to="/research"
+              className={({ isActive }) => `nav-btn ${isActive ? 'active' : ''}`}
+            >
+              Research
+            </NavLink>
+            <NavLink 
+              to="/history"
+              className={({ isActive }) => `nav-btn ${isActive ? 'active' : ''}`}
+            >
+              History
+            </NavLink>
+            <button 
+              onClick={handleLogout}
+              className="nav-btn logout-btn"
+            >
+              Logout
+            </button>
+          </>
+        ) : (
+          <NavLink 
+            to="/login"
+            className={({ isActive }) => `nav-btn ${isActive ? 'active' : ''}`}
+          >
+            Research Login
+          </NavLink>
+        )}
       </div>
       
       <div className="main-content">
-        {currentView === 'chat' ? (
-          <div className="chat-section">
-            <ChatBox 
-              aiSettingsByModel={aiSettingsByModel}
-              onSaveConversation={handleSaveConversation}
-              onShowHistory={handleShowHistory}
-            />
-          </div>
-        ) : currentView === 'research' ? (
-          <div className="research-section">
-            <ResearchPanel 
-              settingsByModel={aiSettingsByModel}
-              onModelSettingsChange={handleSettingsChangeForModel}
-              modelNames={modelNames}
-            />
-          </div>
-        ) : (
-          <div className="history-section">
-            <ConversationHistory
-              conversations={conversations}
-              onLoadConversation={handleLoadConversation}
-              onDeleteConversation={handleDeleteConversation}
-            />
-          </div>
-        )}
+        <Routes>
+          <Route 
+            path="/" 
+            element={
+              <div className="chat-section">
+                <ChatBox 
+                  aiSettingsByModel={aiSettingsByModel}
+                  onSaveConversation={handleSaveConversation}
+                  onShowHistory={handleShowHistory}
+                />
+              </div>
+            } 
+          />
+          <Route 
+            path="/login" 
+            element={
+              <LoginPage 
+                onLogin={handleLogin}
+                onBackToHome={handleBackToHome}
+              />
+            } 
+          />
+          <Route 
+            path="/research" 
+            element={
+              <ProtectedRoute>
+                <div className="research-section">
+                  <ResearchPanel 
+                    settingsByModel={aiSettingsByModel}
+                    onModelSettingsChange={handleSettingsChangeForModel}
+                    modelNames={modelNames}
+                  />
+                </div>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/history" 
+            element={
+              <ProtectedRoute>
+                <div className="history-section">
+                  <ConversationHistory
+                    conversations={conversations}
+                    onLoadConversation={handleLoadConversation}
+                    onDeleteConversation={handleDeleteConversation}
+                  />
+                </div>
+              </ProtectedRoute>
+            } 
+          />
+        </Routes>
       </div>
     </div>
   )

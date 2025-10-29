@@ -31,22 +31,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onBackToHome }) => {
 
   return (
     <div className="login-page">
-      <div className="login-header">
-        <div className="header-content">
-          <div className="header-icon">⚙️</div>
-          <span className="header-title">Human-AI Collaboration Platform</span>
-        </div>
-      </div>
-
       <div className="login-content">
         <div className="login-card">
-          <div className="login-icon">
-            <div className="icon-circle">
-              <div className="icon-e">e</div>
-              <div className="icon-person">👤</div>
-            </div>
-          </div>
-
           <h1 className="login-title">Research Panel Login</h1>
           <p className="login-subtitle">Enter your research key to access the admin panel.</p>
 
@@ -54,7 +40,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onBackToHome }) => {
             <div className="input-group">
               <label className="input-label">Research Key *</label>
               <div className="input-container">
-                <div className="input-icon">🔒</div>
                 <input
                   type="password"
                   value={researchKey}
@@ -62,6 +47,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onBackToHome }) => {
                   placeholder="Enter your research key"
                   className="research-key-input"
                   required
+                  autoComplete="off"
                 />
               </div>
             </div>
