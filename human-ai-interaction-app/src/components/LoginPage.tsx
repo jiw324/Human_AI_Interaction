@@ -39,17 +39,15 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onBackToHome }) => {
           <form onSubmit={handleSubmit} className="login-form">
             <div className="input-group">
               <label className="input-label">Research Key *</label>
-              <div className="input-container">
-                <input
-                  type="password"
-                  value={researchKey}
-                  onChange={(e) => setResearchKey(e.target.value)}
-                  placeholder="Enter your research key"
-                  className="research-key-input"
-                  required
-                  autoComplete="off"
-                />
-              </div>
+              <input
+                type="password"
+                value={researchKey}
+                onChange={(e) => setResearchKey(e.target.value)}
+                placeholder="Enter your research key"
+                className="research-key-input"
+                required
+                autoComplete="off"
+              />
             </div>
 
             {error && (

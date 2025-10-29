@@ -41,7 +41,7 @@ interface ChatBoxProps {
   onShowHistory: () => void;
 }
 
-const ChatBox: React.FC<ChatBoxProps> = ({ aiSettingsByModel, onSaveConversation, onShowHistory }) => {
+const ChatBox: React.FC<ChatBoxProps> = ({ aiSettingsByModel, onSaveConversation }) => {
   // Define four different AI models/personalities
   const aiModels = [
     {
@@ -225,13 +225,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({ aiSettingsByModel, onSaveConversation
           <h3>{selectedModel.name}</h3>
           <span className="status">Online • {selectedModel.personality}</span>
         </div>
-        <button 
-          className="history-btn"
-          onClick={onShowHistory}
-          title="View conversation history"
-        >
-          📚 History
-        </button>
       </div>
       
       <div className="chat-messages">
@@ -266,22 +259,21 @@ const ChatBox: React.FC<ChatBoxProps> = ({ aiSettingsByModel, onSaveConversation
       
       <div className="chat-input">
         <div className="input-container">
-          <textarea
+          <input
+            type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="Type your message here..."
-            rows={1}
             className="message-input"
           />
           <button 
             onClick={handleSendMessage}
             disabled={!inputText.trim() || isTyping}
             className="send-button"
+            title="Send message"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path d="M2 21L23 12L2 3V10L17 12L2 14V21Z" fill="currentColor"/>
-            </svg>
+            ➤
           </button>
         </div>
       </div>
