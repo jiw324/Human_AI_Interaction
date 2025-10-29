@@ -73,7 +73,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onBackToHome }) => {
           </div>
 
           <button className="back-link" onClick={onBackToHome}>
-            ← Back to Home
+            ← Back to Chat
           </button>
         </div>
       </div>

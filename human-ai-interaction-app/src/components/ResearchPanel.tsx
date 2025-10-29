@@ -10,6 +10,7 @@ interface AISettings {
   temperature: number;
   maxTokens: number;
   systemPrompt: string;
+  taskPrompt: string;
 }
 
 interface ResearchPanelProps {
@@ -19,8 +20,8 @@ interface ResearchPanelProps {
 }
 
 const ResearchPanel: React.FC<ResearchPanelProps> = ({ settingsByModel, onModelSettingsChange, modelNames }) => {
-  const [isEditing, setIsEditing] = useState(false);
-
+  const [activeTask, setActiveTask] = useState<string>(modelNames[0]);
+  
   // Debug logging
   console.log('ResearchPanel props:', { settingsByModel, modelNames });
 
@@ -49,6 +50,12 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ settingsByModel, onModelS
     onModelSettingsChange(model, newSettings);
   };
 
+  const handleUpdate = () => {
+    // Settings are already saved in real-time via handleSettingChange
+    // This provides visual feedback
+    alert('Settings updated successfully!');
+  };
+
   const resetToDefaults = () => {
     const defaultSettings: AISettings = {
       personality: 'friendly',
@@ -58,207 +65,180 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ settingsByModel, onModelS
       verbosity: 0.6,
       temperature: 0.7,
       maxTokens: 1000,
-      systemPrompt: 'You are a helpful AI assistant. Be friendly, informative, and engaging in your responses.'
+      systemPrompt: 'You are a helpful AI assistant. Be friendly, informative, and engaging in your responses.',
+      taskPrompt: ''
     };
-    modelNames.forEach((name) => onModelSettingsChange(name, defaultSettings));
+    onModelSettingsChange(activeTask, defaultSettings);
   };
 
-  const exportSettings = () => {
-    const dataStr = JSON.stringify(settingsByModel, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'ai-settings-by-model.json';
-    link.click();
-    URL.revokeObjectURL(url);
-  };
 
-  const importSettings = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const imported = JSON.parse(e.target?.result as string);
-          modelNames.forEach((name) => {
-            if (imported[name]) {
-              onModelSettingsChange(name, imported[name]);
-            }
-          });
-        } catch (error) {
-          alert('Invalid settings file');
-        }
-      };
-      reader.readAsText(file);
-    }
-  };
+  const settings = settingsByModel[activeTask];
+
+  if (!settings) {
+    return (
+      <div className="research-panel">
+        <h2>Research Panel</h2>
+        <p>Settings not found for this task.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="research-panel">
       <div className="panel-header">
         <h2>AI Research Panel</h2>
-        <div className="header-actions">
-          <button 
-            className={`edit-toggle ${isEditing ? 'active' : ''}`}
-            onClick={() => setIsEditing(!isEditing)}
+      </div>
+
+      {/* Task Switcher */}
+      <div className="task-switcher">
+        {modelNames.map((taskName) => (
+          <button
+            key={taskName}
+            className={`task-tab ${activeTask === taskName ? 'active' : ''}`}
+            onClick={() => setActiveTask(taskName)}
           >
-            {isEditing ? 'Save' : 'Edit'}
+            {taskName}
+          </button>
+        ))}
+      </div>
+
+      <div className="panel-content">
+        {/* System Prompt and Task Prompt Side by Side */}
+        <div className="prompts-container">
+          <div className="config-section prompt-section">
+            <h3 className="section-title">System Prompt</h3>
+            <div className="setting-group full-width">
+              <textarea
+                value={settings.systemPrompt}
+                onChange={(e) => handleSettingChange(activeTask, 'systemPrompt', e.target.value)}
+                className="setting-textarea"
+                rows={6}
+                placeholder="Enter the system prompt that defines the AI's behavior..."
+              />
+            </div>
+          </div>
+
+          <div className="config-section prompt-section">
+            <h3 className="section-title">Task Prompt</h3>
+            <div className="setting-group full-width">
+              <textarea
+                value={settings.taskPrompt || ''}
+                onChange={(e) => handleSettingChange(activeTask, 'taskPrompt', e.target.value)}
+                className="setting-textarea"
+                rows={6}
+                placeholder="Enter the specific task prompt or instructions..."
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* AI Model Config Section */}
+        <div className="config-section">
+          <h3 className="section-title">AI Model Config</h3>
+          <div className="settings-grid">
+            <div className="setting-group">
+              <label className="setting-label">Personality</label>
+              <select
+                value={settings.personality}
+                onChange={(e) => handleSettingChange(activeTask, 'personality', e.target.value)}
+                className="setting-select"
+              >
+                {personalityOptions.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="setting-group">
+              <label className="setting-label">Response Speed: {settings.responseSpeed}x</label>
+              <input
+                type="range"
+                min="0.1"
+                max="3.0"
+                step="0.1"
+                value={settings.responseSpeed}
+                onChange={(e) => handleSettingChange(activeTask, 'responseSpeed', parseFloat(e.target.value))}
+                className="setting-slider"
+              />
+            </div>
+
+            <div className="setting-group">
+              <label className="setting-label">Creativity: {Math.round(settings.creativity * 100)}%</label>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.1"
+                value={settings.creativity}
+                onChange={(e) => handleSettingChange(activeTask, 'creativity', parseFloat(e.target.value))}
+                className="setting-slider"
+              />
+            </div>
+
+            <div className="setting-group">
+              <label className="setting-label">Helpfulness: {Math.round(settings.helpfulness * 100)}%</label>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.1"
+                value={settings.helpfulness}
+                onChange={(e) => handleSettingChange(activeTask, 'helpfulness', parseFloat(e.target.value))}
+                className="setting-slider"
+              />
+            </div>
+
+            <div className="setting-group">
+              <label className="setting-label">Verbosity: {Math.round(settings.verbosity * 100)}%</label>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.1"
+                value={settings.verbosity}
+                onChange={(e) => handleSettingChange(activeTask, 'verbosity', parseFloat(e.target.value))}
+                className="setting-slider"
+              />
+            </div>
+
+            <div className="setting-group">
+              <label className="setting-label">Temperature: {settings.temperature}</label>
+              <input
+                type="range"
+                min="0"
+                max="2"
+                step="0.1"
+                value={settings.temperature}
+                onChange={(e) => handleSettingChange(activeTask, 'temperature', parseFloat(e.target.value))}
+                className="setting-slider"
+              />
+            </div>
+
+            <div className="setting-group">
+              <label className="setting-label">Max Tokens: {settings.maxTokens}</label>
+              <input
+                type="range"
+                min="100"
+                max="4000"
+                step="100"
+                value={settings.maxTokens}
+                onChange={(e) => handleSettingChange(activeTask, 'maxTokens', parseInt(e.target.value))}
+                className="setting-slider"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="action-buttons">
+          <button className="update-btn" onClick={handleUpdate}>
+            Update
           </button>
           <button className="reset-btn" onClick={resetToDefaults}>
             Reset
           </button>
-        </div>
-      </div>
-
-      <div className="panel-content">
-        {modelNames.map((modelName) => {
-          const settings = settingsByModel[modelName];
-          if (!settings) {
-            return (
-              <div key={modelName} className="model-section">
-                <h3>{modelName}</h3>
-                <p>Settings not found for this model.</p>
-              </div>
-            );
-          }
-          return (
-            <div key={modelName} className="model-section">
-              <h3>{modelName}</h3>
-              <div className="settings-grid">
-                <div className="setting-group">
-                  <label className="setting-label">Personality</label>
-                  <select
-                    value={settings.personality}
-                    onChange={(e) => handleSettingChange(modelName, 'personality', e.target.value)}
-                    disabled={!isEditing}
-                    className="setting-select"
-                  >
-                    {personalityOptions.map(option => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="setting-group">
-                  <label className="setting-label">Response Speed: {settings.responseSpeed}x</label>
-                  <input
-                    type="range"
-                    min="0.1"
-                    max="3.0"
-                    step="0.1"
-                    value={settings.responseSpeed}
-                    onChange={(e) => handleSettingChange(modelName, 'responseSpeed', parseFloat(e.target.value))}
-                    disabled={!isEditing}
-                    className="setting-slider"
-                  />
-                </div>
-
-                <div className="setting-group">
-                  <label className="setting-label">Creativity: {Math.round(settings.creativity * 100)}%</label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.1"
-                    value={settings.creativity}
-                    onChange={(e) => handleSettingChange(modelName, 'creativity', parseFloat(e.target.value))}
-                    disabled={!isEditing}
-                    className="setting-slider"
-                  />
-                </div>
-
-                <div className="setting-group">
-                  <label className="setting-label">Helpfulness: {Math.round(settings.helpfulness * 100)}%</label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.1"
-                    value={settings.helpfulness}
-                    onChange={(e) => handleSettingChange(modelName, 'helpfulness', parseFloat(e.target.value))}
-                    disabled={!isEditing}
-                    className="setting-slider"
-                  />
-                </div>
-
-                <div className="setting-group">
-                  <label className="setting-label">Verbosity: {Math.round(settings.verbosity * 100)}%</label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.1"
-                    value={settings.verbosity}
-                    onChange={(e) => handleSettingChange(modelName, 'verbosity', parseFloat(e.target.value))}
-                    disabled={!isEditing}
-                    className="setting-slider"
-                  />
-                </div>
-
-                <div className="setting-group">
-                  <label className="setting-label">Temperature: {settings.temperature}</label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="2"
-                    step="0.1"
-                    value={settings.temperature}
-                    onChange={(e) => handleSettingChange(modelName, 'temperature', parseFloat(e.target.value))}
-                    disabled={!isEditing}
-                    className="setting-slider"
-                  />
-                </div>
-
-                <div className="setting-group">
-                  <label className="setting-label">Max Tokens: {settings.maxTokens}</label>
-                  <input
-                    type="range"
-                    min="100"
-                    max="4000"
-                    step="100"
-                    value={settings.maxTokens}
-                    onChange={(e) => handleSettingChange(modelName, 'maxTokens', parseInt(e.target.value))}
-                    disabled={!isEditing}
-                    className="setting-slider"
-                  />
-                </div>
-              </div>
-
-              <div className="setting-group full-width">
-                <label className="setting-label">System Prompt</label>
-                <textarea
-                  value={settings.systemPrompt}
-                  onChange={(e) => handleSettingChange(modelName, 'systemPrompt', e.target.value)}
-                  disabled={!isEditing}
-                  className="setting-textarea"
-                  rows={4}
-                  placeholder="Enter the system prompt that defines the AI's behavior..."
-                />
-              </div>
-              <hr />
-            </div>
-          );
-        })}
-
-        {/* Import/Export */}
-        <div className="import-export-section">
-          <div className="file-actions">
-            <label className="file-input-label">
-              Import Settings
-              <input
-                type="file"
-                accept=".json"
-                onChange={importSettings}
-                className="file-input"
-              />
-            </label>
-            <button className="export-btn" onClick={exportSettings}>
-              Export Settings
-            </button>
-          </div>
         </div>
 
       </div>

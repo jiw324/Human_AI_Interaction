@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Routes, Route, NavLink, useNavigate, Navigate } from 'react-router-dom'
 import ChatBox from './components/ChatBox'
 import ResearchPanel from './components/ResearchPanel'
@@ -15,6 +15,7 @@ interface AISettings {
   temperature: number;
   maxTokens: number;
   systemPrompt: string;
+  taskPrompt: string;
 }
 
 interface Message {
@@ -57,30 +58,74 @@ function App() {
     verbosity: 0.6,
     temperature: 0.7,
     maxTokens: 1000,
-    systemPrompt: 'You are a helpful AI assistant. Be friendly, informative, and engaging in your responses.'
+    systemPrompt: 'You are a helpful AI assistant. Be friendly, informative, and engaging in your responses.',
+    taskPrompt: ''
   };
 
-  const [aiSettingsByModel, setAiSettingsByModel] = useState<Record<string, AISettings>>({
-    'Task 1': { ...defaultSettings, personality: 'analytical' },
-    'Task 2': { ...defaultSettings, personality: 'creative' },
-    'Task 3': { ...defaultSettings, personality: 'expert' },
-    'Task 4': { ...defaultSettings, personality: 'friendly' }
-  });
+  const getInitialSettings = (): Record<string, AISettings> => {
+    const savedSettings = localStorage.getItem('aiSettingsByModel');
+    if (savedSettings) {
+      try {
+        return JSON.parse(savedSettings);
+      } catch (error) {
+        console.error('Error parsing saved settings:', error);
+      }
+    }
+    return {
+      'Task 1': { ...defaultSettings, personality: 'analytical', taskPrompt: '' },
+      'Task 2': { ...defaultSettings, personality: 'creative', taskPrompt: '' },
+      'Task 3': { ...defaultSettings, personality: 'expert', taskPrompt: '' },
+      'Task 4': { ...defaultSettings, personality: 'friendly', taskPrompt: '' }
+    };
+  };
+
+  const [aiSettingsByModel, setAiSettingsByModel] = useState<Record<string, AISettings>>(getInitialSettings);
 
   const handleSettingsChangeForModel = (model: string, newSettings: AISettings) => {
-    setAiSettingsByModel(prev => ({ ...prev, [model]: newSettings }));
+    setAiSettingsByModel(prev => {
+      const updated = { ...prev, [model]: newSettings };
+      // Save to localStorage
+      localStorage.setItem('aiSettingsByModel', JSON.stringify(updated));
+      return updated;
+    });
   };
+
+  // Load conversations from localStorage on mount
+  useEffect(() => {
+    const savedConversations = localStorage.getItem('conversations');
+    if (savedConversations) {
+      try {
+        const parsed = JSON.parse(savedConversations);
+        // Convert date strings back to Date objects
+        const conversationsWithDates = parsed.map((conv: any) => ({
+          ...conv,
+          createdAt: new Date(conv.createdAt),
+          lastMessageAt: new Date(conv.lastMessageAt),
+          messages: conv.messages.map((msg: any) => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp)
+          }))
+        }));
+        setConversations(conversationsWithDates);
+      } catch (error) {
+        console.error('Error parsing saved conversations:', error);
+      }
+    }
+  }, []);
 
   const handleSaveConversation = (conversation: Conversation) => {
     setConversations(prev => {
       const existingIndex = prev.findIndex(conv => conv.id === conversation.id);
+      let updated;
       if (existingIndex >= 0) {
-        const updated = [...prev];
+        updated = [...prev];
         updated[existingIndex] = conversation;
-        return updated;
       } else {
-        return [...prev, conversation];
+        updated = [...prev, conversation];
       }
+      // Save to localStorage
+      localStorage.setItem('conversations', JSON.stringify(updated));
+      return updated;
     });
   };
 
@@ -92,7 +137,12 @@ function App() {
   };
 
   const handleDeleteConversation = (conversationId: string) => {
-    setConversations(prev => prev.filter(conv => conv.id !== conversationId));
+    setConversations(prev => {
+      const updated = prev.filter(conv => conv.id !== conversationId);
+      // Save to localStorage
+      localStorage.setItem('conversations', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const handleShowHistory = () => {
