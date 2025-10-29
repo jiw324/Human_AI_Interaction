@@ -112,12 +112,6 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ settingsByModel, onModelS
       </div>
 
       <div className="panel-content">
-        <div style={{ padding: '20px', backgroundColor: '#f0f0f0', border: '2px solid green', margin: '20px' }}>
-          <h3 style={{ color: 'green' }}>DEBUG: Research Panel is rendering!</h3>
-          <p>Model Names: {JSON.stringify(modelNames)}</p>
-          <p>Settings Keys: {Object.keys(settingsByModel).join(', ')}</p>
-        </div>
-
         {modelNames.map((modelName) => {
           const settings = settingsByModel[modelName];
           if (!settings) {
