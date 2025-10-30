@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './LoginPage.css';
+import { authAPI } from '../services/api';
 
 interface LoginPageProps {
   onLogin: (researchKey: string) => void;
@@ -16,14 +17,13 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onBackToHome }) => {
     setIsLoading(true);
     setError('');
 
-    // Simulate authentication delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Call backend API
+    const result = await authAPI.login(researchKey);
 
-    // Simple validation - in a real app, this would check against a server
-    if (researchKey === 'admin123' || researchKey === 'research2024') {
+    if (result.success) {
       onLogin(researchKey);
     } else {
-      setError('Invalid research key. Please try again.');
+      setError(result.message || 'Invalid research key. Please try again.');
     }
     
     setIsLoading(false);

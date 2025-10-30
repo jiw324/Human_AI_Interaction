@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './ChatBox.css';
+import { chatAPI } from '../services/api';
 
 interface Message {
   id: string;
@@ -166,66 +167,42 @@ const ChatBox: React.FC<ChatBoxProps> = ({ aiSettingsByModel, onSaveConversation
     }
   }, [messages, conversationId, selectedModel, onSaveConversation]);
 
-  const simulateAIResponse = async (userMessage: string): Promise<string> => {
-    // Simulate AI thinking time based on response speed setting
-    const baseDelay = 1000;
-    const speedMultiplier = 1 / currentSettings.responseSpeed;
-    const delay = baseDelay * speedMultiplier + Math.random() * 1000;
-    await new Promise(resolve => setTimeout(resolve, delay));
-    
-    // Generate responses based on selected model's personality
-    const personalityResponses = {
-      analytical: [
-        "Let me analyze this systematically for you.",
-        "I'll break this down into logical components.",
-        "Based on the data and reasoning, here's my analysis.",
-        "Let me examine this from multiple analytical perspectives.",
-        "From an analytical standpoint, I can provide the following insights."
-      ],
-      creative: [
-        "What an imaginative question! Let me explore this creatively.",
-        "I love thinking outside the box! Here's a creative perspective.",
-        "This sparks my creativity! Let me share some innovative ideas.",
-        "How fascinating! Let me approach this from a creative angle.",
-        "I'm excited to brainstorm some creative solutions with you!"
-      ],
-      expert: [
-        "As an expert in this field, I can provide authoritative guidance.",
-        "Based on my extensive knowledge, here's what you should know.",
-        "I have deep expertise in this area. Let me share my insights.",
-        "From my professional experience, I recommend the following.",
-        "My expertise tells me that the best approach would be..."
-      ],
-      friendly: [
-        "That's a great question! I'd love to help you with that.",
-        "I'm excited to chat about this topic with you!",
-        "This is really interesting! Let me share my thoughts.",
-        "I'm here to help and I'm happy to discuss this with you!",
-        "What a wonderful question! Let me help you explore this."
-      ]
+  const getAIResponse = async (userMessage: string): Promise<Message | null> => {
+    // Convert AI model to backend format
+    const aiModel = {
+      id: selectedModel.name.toLowerCase().replace(' ', ''),
+      name: selectedModel.name,
+      greeting: selectedModel.greeting,
+      description: selectedModel.personality
     };
 
-    const baseResponses = personalityResponses[selectedModel.personality as keyof typeof personalityResponses] || personalityResponses.friendly;
-    let response = baseResponses[Math.floor(Math.random() * baseResponses.length)];
-    
-    // Adjust verbosity based on settings
-    if (currentSettings.verbosity > 0.7) {
-      response += " I'll provide you with detailed information and examples to help you understand this better.";
-    } else if (currentSettings.verbosity < 0.3) {
-      response = response.split('.')[0] + ".";
+    // Convert settings to backend format
+    const settings = {
+      personality: currentSettings.personality,
+      responseSpeed: 'medium',
+      creativity: currentSettings.creativity,
+      helpfulness: currentSettings.helpfulness,
+      verbosity: currentSettings.verbosity,
+      temperature: currentSettings.temperature,
+      maxTokens: currentSettings.maxTokens,
+      systemPrompt: currentSettings.systemPrompt,
+      taskPrompt: ''
+    };
+
+    // Call backend API
+    const result = await chatAPI.sendMessage(
+      userMessage,
+      conversationId,
+      aiModel,
+      settings
+    );
+
+    if (result.success && result.response) {
+      return result.response;
+    } else {
+      console.error('Failed to get AI response:', result.error);
+      return null;
     }
-    
-    // Add creativity-based variations
-    if (currentSettings.creativity > 0.8) {
-      response += " Let me also suggest some creative approaches you might not have considered.";
-    }
-    
-    // In a real app, you would process the userMessage and aiSettings here
-    console.log('User message:', userMessage);
-    console.log('Selected AI Model:', selectedModel.name);
-    console.log('Current Settings:', currentSettings);
-    
-    return response;
   };
 
   const handleSendMessage = async () => {
@@ -243,15 +220,20 @@ const ChatBox: React.FC<ChatBoxProps> = ({ aiSettingsByModel, onSaveConversation
     setIsTyping(true);
 
     try {
-      const aiResponse = await simulateAIResponse(userMessage.text);
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: aiResponse,
-        sender: 'ai',
-        timestamp: new Date()
-      };
+      const aiMessage = await getAIResponse(userMessage.text);
       
-      setMessages(prev => [...prev, aiMessage]);
+      if (aiMessage) {
+        setMessages(prev => [...prev, aiMessage]);
+      } else {
+        // Fallback error message
+        const errorMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          text: 'Sorry, I could not connect to the AI service. Please make sure the backend is running on port 3001.',
+          sender: 'ai',
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, errorMessage]);
+      }
     } catch (error) {
       console.error('Error getting AI response:', error);
     } finally {

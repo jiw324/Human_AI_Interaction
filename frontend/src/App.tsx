@@ -4,6 +4,7 @@ import ChatBox from './components/ChatBox'
 import ResearchPanel from './components/ResearchPanel'
 import ConversationHistory from './components/ConversationHistory'
 import LoginPage from './components/LoginPage'
+import { authService, healthAPI } from './services/api'
 import './App.css'
 
 interface AISettings {
@@ -43,10 +44,11 @@ interface Conversation {
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
-    // Check if user is logged in from localStorage
-    return localStorage.getItem('researchLoggedIn') === 'true';
+    // Check if user is logged in from localStorage and has valid token
+    return localStorage.getItem('researchLoggedIn') === 'true' && authService.isAuthenticated();
   });
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking');
 
   const modelNames: string[] = ['Task 1', 'Task 2', 'Task 3', 'Task 4'];
 
@@ -89,6 +91,15 @@ function App() {
       return updated;
     });
   };
+
+  // Check backend health on mount
+  useEffect(() => {
+    const checkBackend = async () => {
+      const isOnline = await healthAPI.check();
+      setBackendStatus(isOnline ? 'online' : 'offline');
+    };
+    checkBackend();
+  }, []);
 
   // Load conversations from localStorage on mount
   useEffect(() => {
@@ -156,6 +167,7 @@ function App() {
     setIsLoggedIn(false);
     localStorage.removeItem('researchLoggedIn');
     localStorage.removeItem('researchKey');
+    authService.clearToken(); // Clear JWT token
     navigate('/');
   };
 
@@ -209,6 +221,10 @@ function App() {
             Research Login
           </NavLink>
         )}
+        <div className="backend-status" title={`Backend: ${backendStatus}`}>
+          <span className={`status-dot ${backendStatus}`}></span>
+          <span className="status-text">{backendStatus === 'online' ? 'Backend Online' : backendStatus === 'offline' ? 'Backend Offline' : 'Checking...'}</span>
+        </div>
       </div>
       
       <div className="main-content">
