@@ -101,15 +101,34 @@ function App() {
     checkBackend();
   }, []);
 
-  // Load tasks from backend when logged in
+  // Load tasks from localStorage first, then sync with backend
   useEffect(() => {
     const loadTasks = async () => {
       if (isLoggedIn && backendStatus === 'online') {
-        console.log('🔐 User logged in, loading tasks from backend...');
+        console.log('🔐 User logged in, loading tasks...');
         setTasksLoading(true);
+        
+        // Try to load from localStorage first for instant UI
+        const cachedTasks = localStorage.getItem('research_tasks');
+        if (cachedTasks) {
+          try {
+            const parsed = JSON.parse(cachedTasks);
+            console.log('💾 Loaded tasks from localStorage:', parsed);
+            setTasks(parsed);
+          } catch (error) {
+            console.error('Error parsing cached tasks:', error);
+          }
+        }
+        
+        // Then fetch from backend and update
         const fetchedTasks = await tasksAPI.getAll();
-        console.log('📦 Tasks received in App.tsx:', fetchedTasks);
+        console.log('📦 Tasks received from backend:', fetchedTasks);
         setTasks(fetchedTasks);
+        
+        // Save to localStorage
+        localStorage.setItem('research_tasks', JSON.stringify(fetchedTasks));
+        console.log('💾 Tasks saved to localStorage');
+        
         setTasksLoading(false);
         console.log('✨ Tasks state updated in App');
       } else {
@@ -118,6 +137,14 @@ function App() {
     };
     loadTasks();
   }, [isLoggedIn, backendStatus]);
+
+  // Save tasks to localStorage whenever they change
+  useEffect(() => {
+    if (tasks.length > 0) {
+      localStorage.setItem('research_tasks', JSON.stringify(tasks));
+      console.log('💾 Tasks saved to localStorage (auto-sync)');
+    }
+  }, [tasks]);
 
   // Load conversations from localStorage on mount
   useEffect(() => {

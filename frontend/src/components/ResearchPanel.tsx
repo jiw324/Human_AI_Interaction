@@ -33,6 +33,9 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
   const [viewMode, setViewMode] = useState<'tasks' | 'config'>('tasks');
   const isAddingTask = useRef(false);
   
+  // Local editing state to prevent focus loss on text inputs
+  const [editingSettings, setEditingSettings] = useState<AISettings | null>(null);
+  
   // Log when tasks are received
   useEffect(() => {
     console.log('📋 ResearchPanel received tasks:', tasks);
@@ -46,6 +49,11 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
       setActiveTaskId(tasks[0].id);
     }
   }, [tasks, activeTaskId]);
+  
+  // Reset editing state when active task changes
+  useEffect(() => {
+    setEditingSettings(null);
+  }, [activeTaskId]);
   
   // System Config State
   const [llamaBaseUrl, setLlamaBaseUrl] = useState<string>(
@@ -182,23 +190,47 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
     { value: 'expert', label: 'Expert & Authoritative' }
   ];
 
+  // Get current settings (from editing state or active task)
+  const currentSettings = editingSettings || activeTask.settings;
+
   const handleSettingChange = (key: keyof AISettings, value: string | number) => {
     if (!activeTask) return;
     
-    const newSettings = { ...activeTask.settings, [key]: value };
-    const updatedTasks = tasks.map(t =>
-      t.id === activeTaskId ? { ...t, settings: newSettings } : t
-    );
-    onTasksChange(updatedTasks);
+    // Update local editing state only (prevents re-render and focus loss)
+    const newSettings = { ...currentSettings, [key]: value };
+    setEditingSettings(newSettings);
   };
 
   const handleUpdate = async () => {
     if (!activeTask) return;
     
     try {
-      await tasksAPI.update(activeTask.id, undefined, activeTask.settings);
-      alert('Settings updated successfully!');
+      console.log('🔄 Updating task settings to backend...', {
+        taskId: activeTask.id,
+        taskName: activeTask.name,
+        settings: currentSettings
+      });
+      
+      const updatedTask = await tasksAPI.update(activeTask.id, undefined, currentSettings);
+      
+      if (updatedTask) {
+        // Update local state and localStorage
+        const updatedTasks = tasks.map(t =>
+          t.id === activeTaskId ? updatedTask : t
+        );
+        onTasksChange(updatedTasks);
+        
+        // Clear editing state after successful save
+        setEditingSettings(null);
+        
+        // Explicitly save to localStorage
+        localStorage.setItem('research_tasks', JSON.stringify(updatedTasks));
+        console.log('💾 Tasks updated in localStorage');
+        
+        alert('✅ Settings updated successfully!');
+      }
     } catch (error) {
+      console.error('❌ Failed to update settings:', error);
       alert('Failed to update settings. Please try again.');
     }
   };
@@ -219,15 +251,25 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
     };
     
     try {
+      console.log('🔄 Resetting task to default settings...');
       const updatedTask = await tasksAPI.update(activeTask.id, undefined, defaultSettings);
       if (updatedTask) {
         const updatedTasks = tasks.map(t =>
           t.id === activeTaskId ? updatedTask : t
         );
         onTasksChange(updatedTasks);
+        
+        // Clear editing state
+        setEditingSettings(null);
+        
+        // Save to localStorage
+        localStorage.setItem('research_tasks', JSON.stringify(updatedTasks));
+        console.log('💾 Task reset saved to localStorage');
+        
         alert('Settings reset to defaults!');
       }
     } catch (error) {
+      console.error('❌ Failed to reset settings:', error);
       alert('Failed to reset settings. Please try again.');
     }
   };
@@ -269,18 +311,25 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
     };
     
     try {
+      console.log('➕ Creating new task:', trimmedName);
       const newTask = await tasksAPI.create(trimmedName, defaultSettings);
       
       if (newTask) {
-        onTasksChange([...tasks, newTask]);
+        const updatedTasks = [...tasks, newTask];
+        onTasksChange(updatedTasks);
+        
+        // Save to localStorage
+        localStorage.setItem('research_tasks', JSON.stringify(updatedTasks));
+        console.log('💾 New task saved to localStorage');
+        
         setActiveTaskId(newTask.id);
         setNewTaskName('');
-        alert('Task created successfully!');
+        alert('✅ Task created successfully!');
       } else {
         alert('Failed to create task. Please try again.');
       }
     } catch (error) {
-      console.error('Error creating task:', error);
+      console.error('❌ Error creating task:', error);
       alert('Failed to create task. Please try again.');
     } finally {
       // Reset flag after operation completes
@@ -301,21 +350,26 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
     
     if (window.confirm(`Are you sure you want to delete task "${taskToDelete.name}"?`)) {
       try {
+        console.log('🗑️ Deleting task:', taskToDelete.name);
         const success = await tasksAPI.delete(taskId);
         
         if (success) {
           const newTasks = tasks.filter(t => t.id !== taskId);
           onTasksChange(newTasks);
           
+          // Save to localStorage
+          localStorage.setItem('research_tasks', JSON.stringify(newTasks));
+          console.log('💾 Task deletion saved to localStorage');
+          
           if (activeTaskId === taskId) {
             setActiveTaskId(newTasks[0].id);
           }
-          alert('Task deleted successfully!');
+          alert('✅ Task deleted successfully!');
         } else {
           alert('Failed to delete task. Please try again.');
         }
       } catch (error) {
-        console.error('Error deleting task:', error);
+        console.error('❌ Error deleting task:', error);
         alert('Failed to delete task. Please try again.');
       }
     }
@@ -350,7 +404,8 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
     }
   };
 
-  const settings = activeTask.settings;
+  // Use currentSettings which includes any unsaved edits
+  const settings = currentSettings;
 
   return (
     <div className="research-panel">
