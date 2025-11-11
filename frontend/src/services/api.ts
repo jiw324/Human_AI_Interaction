@@ -17,6 +17,7 @@ export interface AIModel {
 }
 
 export interface AISettings {
+  // AI Model Settings
   personality: string;
   responseSpeed: number;
   creativity: number;
@@ -26,6 +27,14 @@ export interface AISettings {
   maxTokens: number;
   systemPrompt: string;
   taskPrompt: string;
+  // System Configuration (Task-specific)
+  llamaBaseUrl?: string;
+  llamaServiceUrl?: string;
+  llamaApiKey?: string;
+  openaiApiKey?: string;
+  anthropicApiKey?: string;
+  defaultModel?: string;
+  autoUpdateRobotList?: boolean;
 }
 
 export interface Conversation {

@@ -9,6 +9,7 @@ import settingsRoutes from './routes/settings.routes';
 import conversationRoutes from './routes/conversation.routes';
 import taskRoutes from './routes/task.routes';
 import { errorHandler } from './middleware/error.middleware';
+import db from './config/database';
 
 // Load environment variables
 dotenv.config();
@@ -89,10 +90,19 @@ app.use((req, res) => {
 app.use(errorHandler);
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 API: http://localhost:${PORT}/api`);
+  
+  // Test database connection
+  console.log('\n🔌 Testing database connection...');
+  const dbConnected = await db.testConnection();
+  if (!dbConnected) {
+    console.warn('⚠️  Database connection failed. Server will run but database operations will fail.');
+    console.warn('⚠️  Please check your database configuration in .env file');
+  }
+  console.log('');
 });
 
 export default app;

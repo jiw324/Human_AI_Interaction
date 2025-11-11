@@ -1,4 +1,8 @@
 import mysql from 'mysql2/promise';
+import dotenv from 'dotenv';
+
+// Load environment variables FIRST
+dotenv.config();
 
 // Database configuration interface
 interface DatabaseConfig {
@@ -34,10 +38,14 @@ export const testConnection = async (): Promise<boolean> => {
     console.log('✅ Database connected successfully');
     console.log(`📊 Database: ${dbConfig.database}`);
     console.log(`🏠 Host: ${dbConfig.host}:${dbConfig.port}`);
+    console.log(`👤 User: ${dbConfig.user}`);
+    console.log(`🔐 Password: ${dbConfig.password ? '***' + dbConfig.password.slice(-4) : 'NOT SET'}`);
     connection.release();
     return true;
   } catch (error) {
     console.error('❌ Database connection failed:', error);
+    console.error(`🔍 Attempted connection with user: ${dbConfig.user}`);
+    console.error(`🔍 Password set: ${dbConfig.password ? 'YES' : 'NO'}`);
     return false;
   }
 };

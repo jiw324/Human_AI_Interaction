@@ -3,6 +3,7 @@ import { tasksAPI, type Task } from '../services/api';
 import './ResearchPanel.css';
 
 interface AISettings {
+  // AI Model Settings
   personality: string;
   responseSpeed: number;
   creativity: number;
@@ -12,6 +13,14 @@ interface AISettings {
   maxTokens: number;
   systemPrompt: string;
   taskPrompt: string;
+  // System Configuration (Task-specific)
+  llamaBaseUrl?: string;
+  llamaServiceUrl?: string;
+  llamaApiKey?: string;
+  openaiApiKey?: string;
+  anthropicApiKey?: string;
+  defaultModel?: string;
+  autoUpdateRobotList?: boolean;
 }
 
 interface ResearchPanelProps {
@@ -30,7 +39,6 @@ interface ModelInfo {
 const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) => {
   const [activeTaskId, setActiveTaskId] = useState<string>(tasks[0]?.id || '');
   const [newTaskName, setNewTaskName] = useState<string>('');
-  const [viewMode, setViewMode] = useState<'tasks' | 'config'>('tasks');
   const isAddingTask = useRef(false);
   
   // Local editing state to prevent focus loss on text inputs
@@ -55,29 +63,8 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
     setEditingSettings(null);
   }, [activeTaskId]);
   
-  // System Config State
-  const [llamaBaseUrl, setLlamaBaseUrl] = useState<string>(
-    localStorage.getItem('llamaBaseUrl') || 'https://llm-proxy.oai-at.org/'
-  );
-  const [llamaServiceUrl, setLlamaServiceUrl] = useState<string>(
-    localStorage.getItem('llamaServiceUrl') || ''
-  );
-  const [llamaApiKey, setLlamaApiKey] = useState<string>(
-    localStorage.getItem('llamaApiKey') || ''
-  );
+  // System Config State (just for UI, actual values come from currentSettings)
   const [showLlamaKey, setShowLlamaKey] = useState<boolean>(false);
-  const [autoUpdateRobotList, setAutoUpdateRobotList] = useState<boolean>(
-    localStorage.getItem('autoUpdateRobotList') === 'true'
-  );
-  const [openaiApiKey, setOpenaiApiKey] = useState<string>(
-    localStorage.getItem('openaiApiKey') || ''
-  );
-  const [anthropicApiKey, setAnthropicApiKey] = useState<string>(
-    localStorage.getItem('anthropicApiKey') || ''
-  );
-  const [defaultModel, setDefaultModel] = useState<string>(
-    localStorage.getItem('defaultModel') || ''
-  );
   const [availableModels] = useState<string[]>([
     'Mistral 7B Instruct',
     'Nova Pro',
@@ -193,7 +180,7 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
   // Get current settings (from editing state or active task)
   const currentSettings = editingSettings || activeTask.settings;
 
-  const handleSettingChange = (key: keyof AISettings, value: string | number) => {
+  const handleSettingChange = (key: keyof AISettings, value: string | number | boolean) => {
     if (!activeTask) return;
     
     // Update local editing state only (prevents re-render and focus loss)
@@ -247,7 +234,14 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
       temperature: 0.7,
       maxTokens: 1000,
       systemPrompt: 'You are a helpful AI assistant. Be friendly, informative, and engaging in your responses.',
-      taskPrompt: ''
+      taskPrompt: '',
+      llamaBaseUrl: 'https://llm-proxy.oai-at.org/',
+      llamaServiceUrl: '',
+      llamaApiKey: '',
+      openaiApiKey: '',
+      anthropicApiKey: '',
+      defaultModel: 'GPT-4',
+      autoUpdateRobotList: false
     };
     
     try {
@@ -307,7 +301,14 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
       temperature: 0.7,
       maxTokens: 1000,
       systemPrompt: 'You are a helpful AI assistant. Be friendly, informative, and engaging in your responses.',
-      taskPrompt: ''
+      taskPrompt: '',
+      llamaBaseUrl: 'https://llm-proxy.oai-at.org/',
+      llamaServiceUrl: '',
+      llamaApiKey: '',
+      openaiApiKey: '',
+      anthropicApiKey: '',
+      defaultModel: 'GPT-4',
+      autoUpdateRobotList: false
     };
     
     try {
@@ -380,16 +381,9 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
     alert('Refreshing model list...');
   };
 
-  const handleSaveConfiguration = () => {
-    localStorage.setItem('llamaBaseUrl', llamaBaseUrl);
-    localStorage.setItem('llamaServiceUrl', llamaServiceUrl);
-    localStorage.setItem('llamaApiKey', llamaApiKey);
-    localStorage.setItem('autoUpdateRobotList', autoUpdateRobotList.toString());
-    localStorage.setItem('openaiApiKey', openaiApiKey);
-    localStorage.setItem('anthropicApiKey', anthropicApiKey);
-    localStorage.setItem('defaultModel', defaultModel);
-    
-    alert('Configuration saved and models updated successfully!');
+  const handleSaveConfiguration = async () => {
+    // System config is now part of task settings, so use handleUpdate
+    await handleUpdate();
   };
 
   const handleClearTestRobots = () => {
@@ -413,26 +407,8 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
         <h2>AI Research Panel</h2>
       </div>
 
-      {/* View Switcher */}
-      <div className="view-switcher">
-        <button
-          type="button"
-          className={`view-tab ${viewMode === 'tasks' ? 'active' : ''}`}
-          onClick={() => setViewMode('tasks')}
-        >
-          📋 Task Configuration
-        </button>
-        <button
-          type="button"
-          className={`view-tab ${viewMode === 'config' ? 'active' : ''}`}
-          onClick={() => setViewMode('config')}
-        >
-          ⚙️ System Configuration
-        </button>
-      </div>
-
-      <div className="panel-content">{viewMode === 'tasks' ? (
-        // TASK CONFIGURATION VIEW
+      <div className="panel-content">
+        {/* TASK CONFIGURATION (merged with System Configuration) */}
         <>
         {/* Tasks Management Section */}
         <div className="config-section tasks-section">
@@ -617,19 +593,13 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="action-buttons">
-          <button type="button" className="update-btn" onClick={handleUpdate}>
-            Update
-          </button>
-          <button type="button" className="reset-btn" onClick={resetToDefaults}>
-            Reset
-          </button>
+        {/* Divider */}
+        <div className="config-divider">
+          <h2 className="divider-title">⚙️ System Configuration</h2>
         </div>
-        </>
-      ) : (
-        // SYSTEM CONFIGURATION VIEW
-        <div className="system-config-view">
+
+        {/* System Configuration Section */}
+        <div className="system-config-section">
           <div className="config-container">
             {/* Left Column */}
             <div className="config-left-column">
@@ -641,8 +611,8 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
                   <label className="form-label">Llama.LM Base URL</label>
                   <input
                     type="text"
-                    value={llamaBaseUrl}
-                    onChange={(e) => setLlamaBaseUrl(e.target.value)}
+                    value={currentSettings.llamaBaseUrl || ''}
+                    onChange={(e) => handleSettingChange('llamaBaseUrl', e.target.value)}
                     className="form-input"
                     placeholder="https://llm-proxy.oai-at.org/"
                   />
@@ -652,8 +622,8 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
                   <label className="form-label">Llama.LM Service base URL</label>
                   <input
                     type="text"
-                    value={llamaServiceUrl}
-                    onChange={(e) => setLlamaServiceUrl(e.target.value)}
+                    value={currentSettings.llamaServiceUrl || ''}
+                    onChange={(e) => handleSettingChange('llamaServiceUrl', e.target.value)}
                     className="form-input"
                     placeholder="Enter service base URL"
                   />
@@ -664,8 +634,8 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
                   <div className="input-with-toggle">
                     <input
                       type={showLlamaKey ? 'text' : 'password'}
-                      value={llamaApiKey}
-                      onChange={(e) => setLlamaApiKey(e.target.value)}
+                      value={currentSettings.llamaApiKey || ''}
+                      onChange={(e) => handleSettingChange('llamaApiKey', e.target.value)}
                       className="form-input"
                       placeholder="••••••••••••••••••"
                     />
@@ -692,8 +662,8 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
                   <label className="checkbox-label">
                     <input
                       type="checkbox"
-                      checked={autoUpdateRobotList}
-                      onChange={(e) => setAutoUpdateRobotList(e.target.checked)}
+                      checked={currentSettings.autoUpdateRobotList || false}
+                      onChange={(e) => handleSettingChange('autoUpdateRobotList', e.target.checked)}
                     />
                     <span>Automatically Update Robot List</span>
                   </label>
@@ -708,8 +678,8 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
                   <label className="form-label">OpenAI API Key</label>
                   <input
                     type="password"
-                    value={openaiApiKey}
-                    onChange={(e) => setOpenaiApiKey(e.target.value)}
+                    value={currentSettings.openaiApiKey || ''}
+                    onChange={(e) => handleSettingChange('openaiApiKey', e.target.value)}
                     className="form-input"
                     placeholder="sk-..."
                   />
@@ -719,8 +689,8 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
                   <label className="form-label">Anthropic API Key</label>
                   <input
                     type="password"
-                    value={anthropicApiKey}
-                    onChange={(e) => setAnthropicApiKey(e.target.value)}
+                    value={currentSettings.anthropicApiKey || ''}
+                    onChange={(e) => handleSettingChange('anthropicApiKey', e.target.value)}
                     className="form-input"
                     placeholder="sk-ant-..."
                   />
@@ -740,8 +710,8 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
                 <div className="form-group">
                   <label className="form-label">Default Model</label>
                   <select
-                    value={defaultModel}
-                    onChange={(e) => setDefaultModel(e.target.value)}
+                    value={currentSettings.defaultModel || ''}
+                    onChange={(e) => handleSettingChange('defaultModel', e.target.value)}
                     className="form-select"
                   >
                     <option value="">Select default model for all tasks</option>
@@ -752,7 +722,7 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
                     ))}
                   </select>
                   <p className="form-hint">
-                    Select the default model for all tasks. It will affect other existing tasks.
+                    Select the default model for this task.
                   </p>
                 </div>
               </section>
@@ -848,7 +818,17 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
             </div>
           </div>
         </div>
-      )}
+
+        {/* Action Buttons */}
+        <div className="action-buttons">
+          <button type="button" className="update-btn" onClick={handleUpdate}>
+            💾 Update All Settings
+          </button>
+          <button type="button" className="reset-btn" onClick={resetToDefaults}>
+            🔄 Reset to Defaults
+          </button>
+        </div>
+        </>
       </div>
     </div>
   );

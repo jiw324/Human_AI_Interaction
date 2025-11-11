@@ -1,95 +1,74 @@
 import { Request, Response } from 'express';
-
-// Mock database - In production, this would be replaced with actual database calls
-const mockTasks = [
-  {
-    id: 'task-1',
-    name: 'Task 1',
-    settings: {
-      personality: 'analytical',
-      responseSpeed: 1.0,
-      creativity: 0.7,
-      helpfulness: 0.9,
-      verbosity: 0.6,
-      temperature: 0.7,
-      maxTokens: 1000,
-      systemPrompt: 'You are a helpful AI assistant. Be friendly, informative, and engaging in your responses.',
-      taskPrompt: ''
-    }
-  },
-  {
-    id: 'task-2',
-    name: 'Task 2',
-    settings: {
-      personality: 'creative',
-      responseSpeed: 1.0,
-      creativity: 0.7,
-      helpfulness: 0.9,
-      verbosity: 0.6,
-      temperature: 0.7,
-      maxTokens: 1000,
-      systemPrompt: 'You are a helpful AI assistant. Be friendly, informative, and engaging in your responses.',
-      taskPrompt: ''
-    }
-  },
-  {
-    id: 'task-3',
-    name: 'Task 3',
-    settings: {
-      personality: 'expert',
-      responseSpeed: 1.0,
-      creativity: 0.7,
-      helpfulness: 0.9,
-      verbosity: 0.6,
-      temperature: 0.7,
-      maxTokens: 1000,
-      systemPrompt: 'You are a helpful AI assistant. Be friendly, informative, and engaging in your responses.',
-      taskPrompt: ''
-    }
-  },
-  {
-    id: 'task-4',
-    name: 'Task 4',
-    settings: {
-      personality: 'friendly',
-      responseSpeed: 1.0,
-      creativity: 0.7,
-      helpfulness: 0.9,
-      verbosity: 0.6,
-      temperature: 0.7,
-      maxTokens: 1000,
-      systemPrompt: 'You are a helpful AI assistant. Be friendly, informative, and engaging in your responses.',
-      taskPrompt: ''
-    }
-  }
-];
-
-// In-memory storage for tasks (simulates database)
-let tasks = [...mockTasks];
+import db from '../config/database';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
- * Get all tasks
+ * Transform database row to frontend format
  */
-export const getAllTasks = (_req: Request, res: Response) => {
+const transformTaskFromDB = (dbTask: any) => {
+  return {
+    id: dbTask.id,
+    name: dbTask.name,
+    settings: {
+      // AI Model Settings
+      personality: dbTask.personality,
+      responseSpeed: parseFloat(dbTask.response_speed),
+      creativity: parseFloat(dbTask.creativity),
+      helpfulness: parseFloat(dbTask.helpfulness),
+      verbosity: parseFloat(dbTask.verbosity),
+      temperature: parseFloat(dbTask.temperature),
+      maxTokens: dbTask.max_tokens,
+      systemPrompt: dbTask.system_prompt,
+      taskPrompt: dbTask.task_prompt || '',
+      // System Configuration
+      llamaBaseUrl: dbTask.llama_base_url || 'https://llm-proxy.oai-at.org/',
+      llamaServiceUrl: dbTask.llama_service_url || '',
+      llamaApiKey: dbTask.llama_api_key || '',
+      openaiApiKey: dbTask.openai_api_key || '',
+      anthropicApiKey: dbTask.anthropic_api_key || '',
+      defaultModel: dbTask.default_model || '',
+      autoUpdateRobotList: Boolean(dbTask.auto_update_robot_list)
+    }
+  };
+};
+
+/**
+ * Get all tasks for the authenticated user
+ */
+export const getAllTasks = async (req: Request, res: Response) => {
   try {
-    // TODO: Replace with actual database query
-    // const tasks = await db.query('SELECT * FROM tasks');
+    // Get user ID from authenticated request
+    const userId = (req as any).user?.id || 'admin-001'; // Fallback for development
     
-    console.log('📤 [Backend] Sending all tasks to frontend');
-    console.log(`📊 [Backend] Total tasks: ${tasks.length}`);
-    console.log('📋 [Backend] Task names:', tasks.map(t => t.name).join(', '));
+    console.log('📤 [Backend] Fetching tasks from database for user:', userId);
+    
+    // Query database for user's tasks
+    const tasks = await db.query(
+      `SELECT * FROM tasks 
+       WHERE user_id = ? AND is_active = TRUE 
+       ORDER BY created_at ASC`,
+      [userId]
+    );
+    
+    console.log(`📊 [Backend] Found ${tasks.length} tasks in database`);
+    
+    // Transform to frontend format
+    const transformedTasks = tasks.map((t: any) => transformTaskFromDB(t));
+    
+    console.log('📋 [Backend] Task names:', transformedTasks.map((t: any) => t.name).join(', '));
     
     res.status(200).json({
       success: true,
-      data: tasks
+      data: transformedTasks
     });
     
     console.log('✅ [Backend] Tasks sent successfully');
   } catch (error) {
-    console.error('❌ [Backend] Error fetching tasks:', error);
+    console.error('❌ [Backend] Error fetching tasks from database:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch tasks'
+      message: 'Failed to fetch tasks',
+      error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
     });
   }
 };
@@ -97,34 +76,41 @@ export const getAllTasks = (_req: Request, res: Response) => {
 /**
  * Get a single task by ID
  */
-export const getTaskById = (req: Request, res: Response) => {
+export const getTaskById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    console.log(`📤 [Backend] Fetching task by ID: ${id}`);
+    const userId = (req as any).user?.id || 'admin-001';
     
-    // TODO: Replace with actual database query
-    // const task = await db.query('SELECT * FROM tasks WHERE id = ?', [id]);
+    console.log(`🔍 [Backend] Fetching task ${id} for user ${userId}`);
     
-    const task = tasks.find(t => t.id === id);
+    const task = await db.queryOne(
+      `SELECT * FROM tasks 
+       WHERE id = ? AND user_id = ? AND is_active = TRUE`,
+      [id, userId]
+    );
     
     if (!task) {
-      console.log(`⚠️ [Backend] Task not found: ${id}`);
+      console.log('⚠️ [Backend] Task not found');
       return res.status(404).json({
         success: false,
         message: 'Task not found'
       });
     }
     
-    console.log(`✅ [Backend] Sending task: ${task.name}`);
-    return res.status(200).json({
+    const transformedTask = transformTaskFromDB(task);
+    
+    console.log('✅ [Backend] Task found:', transformedTask.name);
+    
+    res.status(200).json({
       success: true,
-      data: task
+      data: transformedTask
     });
   } catch (error) {
     console.error('❌ [Backend] Error fetching task:', error);
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
-      message: 'Failed to fetch task'
+      message: 'Failed to fetch task',
+      error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
     });
   }
 };
@@ -132,54 +118,94 @@ export const getTaskById = (req: Request, res: Response) => {
 /**
  * Create a new task
  */
-export const createTask = (req: Request, res: Response) => {
+export const createTask = async (req: Request, res: Response) => {
   try {
     const { name, settings } = req.body;
-    console.log(`➕ [Backend] Creating new task: "${name}"`);
+    const userId = (req as any).user?.id || 'admin-001';
     
+    // Validation
     if (!name || !settings) {
-      console.log('⚠️ [Backend] Missing name or settings');
       return res.status(400).json({
         success: false,
-        message: 'Name and settings are required'
+        message: 'Task name and settings are required'
       });
     }
     
-    // Check if task name already exists
-    const existingTask = tasks.find(t => t.name === name);
+    console.log('➕ [Backend] Creating new task:', name);
+    
+    // Check if task name already exists for this user
+    const existingTask = await db.queryOne(
+      `SELECT id FROM tasks 
+       WHERE user_id = ? AND name = ? AND is_active = TRUE`,
+      [userId, name]
+    );
+    
     if (existingTask) {
-      console.log(`⚠️ [Backend] Task name already exists: "${name}"`);
       return res.status(409).json({
         success: false,
         message: 'Task with this name already exists'
       });
     }
     
-    // Create new task
-    const newTask = {
-      id: `task-${Date.now()}`,
-      name,
-      settings
-    };
+    const taskId = uuidv4();
     
-    // TODO: Replace with actual database insert
-    // const result = await db.query('INSERT INTO tasks (id, name, settings) VALUES (?, ?, ?)', 
-    //   [newTask.id, newTask.name, JSON.stringify(newTask.settings)]);
+    // Insert new task
+    await db.query(
+      `INSERT INTO tasks (
+        id, user_id, name,
+        personality, response_speed, creativity, helpfulness, verbosity,
+        temperature, max_tokens, system_prompt, task_prompt,
+        llama_base_url, llama_service_url, llama_api_key,
+        openai_api_key, anthropic_api_key, default_model, auto_update_robot_list
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        taskId,
+        userId,
+        name,
+        settings.personality || 'friendly',
+        settings.responseSpeed || 1.0,
+        settings.creativity || 0.7,
+        settings.helpfulness || 0.9,
+        settings.verbosity || 0.6,
+        settings.temperature || 0.7,
+        settings.maxTokens || 1000,
+        settings.systemPrompt || 'You are a helpful AI assistant.',
+        settings.taskPrompt || '',
+        settings.llamaBaseUrl || 'https://llm-proxy.oai-at.org/',
+        settings.llamaServiceUrl || '',
+        settings.llamaApiKey || '',
+        settings.openaiApiKey || '',
+        settings.anthropicApiKey || '',
+        settings.defaultModel || '',
+        settings.autoUpdateRobotList || false
+      ]
+    );
     
-    tasks.push(newTask);
-    console.log(`✅ [Backend] Task created with ID: ${newTask.id}`);
-    console.log(`📊 [Backend] Total tasks now: ${tasks.length}`);
+    // Fetch the created task
+    const createdTask = await db.queryOne(
+      `SELECT * FROM tasks WHERE id = ?`,
+      [taskId]
+    );
     
-    return res.status(201).json({
+    if (!createdTask) {
+      throw new Error('Failed to retrieve created task');
+    }
+    
+    const transformedTask = transformTaskFromDB(createdTask);
+    
+    console.log('✅ [Backend] Task created successfully:', transformedTask.name);
+    
+    res.status(201).json({
       success: true,
-      data: newTask,
+      data: transformedTask,
       message: 'Task created successfully'
     });
   } catch (error) {
     console.error('❌ [Backend] Error creating task:', error);
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
-      message: 'Failed to create task'
+      message: 'Failed to create task',
+      error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
     });
   }
 };
@@ -187,98 +213,221 @@ export const createTask = (req: Request, res: Response) => {
 /**
  * Update a task
  */
-export const updateTask = (req: Request, res: Response) => {
+export const updateTask = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { name, settings } = req.body;
-    console.log(`🔄 [Backend] Updating task: ${id}`);
-    console.log(`📝 [Backend] Update data:`, { name, settingsUpdated: !!settings });
+    const userId = (req as any).user?.id || 'admin-001';
     
-    // TODO: Replace with actual database query
-    // const result = await db.query('UPDATE tasks SET name = ?, settings = ? WHERE id = ?',
-    //   [name, JSON.stringify(settings), id]);
+    console.log('🔄 [Backend] Updating task:', id);
     
-    const taskIndex = tasks.findIndex(t => t.id === id);
+    // Check if task exists and belongs to user
+    const existingTask = await db.queryOne(
+      `SELECT * FROM tasks 
+       WHERE id = ? AND user_id = ? AND is_active = TRUE`,
+      [id, userId]
+    );
     
-    if (taskIndex === -1) {
-      console.log(`⚠️ [Backend] Task not found for update: ${id}`);
+    if (!existingTask) {
       return res.status(404).json({
         success: false,
         message: 'Task not found'
       });
     }
     
-    // Update task
-    const oldName = tasks[taskIndex].name;
+    // If name is being updated, check for duplicates
+    if (name && name !== existingTask.name) {
+      const duplicate = await db.queryOne(
+        `SELECT id FROM tasks 
+         WHERE user_id = ? AND name = ? AND id != ? AND is_active = TRUE`,
+        [userId, name, id]
+      );
+      
+      if (duplicate) {
+        return res.status(409).json({
+          success: false,
+          message: 'Task with this name already exists'
+        });
+      }
+    }
+    
+    // Build update query
+    const updates: string[] = [];
+    const values: any[] = [];
+    
     if (name !== undefined) {
-      tasks[taskIndex].name = name;
-    }
-    if (settings !== undefined) {
-      tasks[taskIndex].settings = settings;
+      updates.push('name = ?');
+      values.push(name);
     }
     
-    console.log(`✅ [Backend] Task updated: "${oldName}" → "${tasks[taskIndex].name}"`);
+    if (settings) {
+      if (settings.personality !== undefined) {
+        updates.push('personality = ?');
+        values.push(settings.personality);
+      }
+      if (settings.responseSpeed !== undefined) {
+        updates.push('response_speed = ?');
+        values.push(settings.responseSpeed);
+      }
+      if (settings.creativity !== undefined) {
+        updates.push('creativity = ?');
+        values.push(settings.creativity);
+      }
+      if (settings.helpfulness !== undefined) {
+        updates.push('helpfulness = ?');
+        values.push(settings.helpfulness);
+      }
+      if (settings.verbosity !== undefined) {
+        updates.push('verbosity = ?');
+        values.push(settings.verbosity);
+      }
+      if (settings.temperature !== undefined) {
+        updates.push('temperature = ?');
+        values.push(settings.temperature);
+      }
+      if (settings.maxTokens !== undefined) {
+        updates.push('max_tokens = ?');
+        values.push(settings.maxTokens);
+      }
+      if (settings.systemPrompt !== undefined) {
+        updates.push('system_prompt = ?');
+        values.push(settings.systemPrompt);
+      }
+      if (settings.taskPrompt !== undefined) {
+        updates.push('task_prompt = ?');
+        values.push(settings.taskPrompt);
+      }
+      if (settings.llamaBaseUrl !== undefined) {
+        updates.push('llama_base_url = ?');
+        values.push(settings.llamaBaseUrl);
+      }
+      if (settings.llamaServiceUrl !== undefined) {
+        updates.push('llama_service_url = ?');
+        values.push(settings.llamaServiceUrl);
+      }
+      if (settings.llamaApiKey !== undefined) {
+        updates.push('llama_api_key = ?');
+        values.push(settings.llamaApiKey);
+      }
+      if (settings.openaiApiKey !== undefined) {
+        updates.push('openai_api_key = ?');
+        values.push(settings.openaiApiKey);
+      }
+      if (settings.anthropicApiKey !== undefined) {
+        updates.push('anthropic_api_key = ?');
+        values.push(settings.anthropicApiKey);
+      }
+      if (settings.defaultModel !== undefined) {
+        updates.push('default_model = ?');
+        values.push(settings.defaultModel);
+      }
+      if (settings.autoUpdateRobotList !== undefined) {
+        updates.push('auto_update_robot_list = ?');
+        values.push(settings.autoUpdateRobotList);
+      }
+    }
     
-    return res.status(200).json({
+    if (updates.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No fields to update'
+      });
+    }
+    
+    // Add task ID to values
+    values.push(id);
+    
+    // Execute update
+    await db.query(
+      `UPDATE tasks SET ${updates.join(', ')} WHERE id = ?`,
+      values
+    );
+    
+    // Fetch updated task
+    const updatedTask = await db.queryOne(
+      `SELECT * FROM tasks WHERE id = ?`,
+      [id]
+    );
+    
+    if (!updatedTask) {
+      throw new Error('Failed to retrieve updated task');
+    }
+    
+    const transformedTask = transformTaskFromDB(updatedTask);
+    
+    console.log('✅ [Backend] Task updated successfully:', transformedTask.name);
+    
+    res.status(200).json({
       success: true,
-      data: tasks[taskIndex],
+      data: transformedTask,
       message: 'Task updated successfully'
     });
   } catch (error) {
     console.error('❌ [Backend] Error updating task:', error);
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
-      message: 'Failed to update task'
+      message: 'Failed to update task',
+      error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
     });
   }
 };
 
 /**
- * Delete a task
+ * Delete a task (soft delete)
  */
-export const deleteTask = (req: Request, res: Response) => {
+export const deleteTask = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    console.log(`🗑️ [Backend] Delete request for task: ${id}`);
-    console.log(`📊 [Backend] Current tasks count: ${tasks.length}`);
+    const userId = (req as any).user?.id || 'admin-001';
     
-    // Prevent deletion if only one task remains
-    if (tasks.length <= 1) {
-      console.log('⚠️ [Backend] Cannot delete last task');
-      return res.status(400).json({
-        success: false,
-        message: 'Cannot delete the last task'
-      });
-    }
+    console.log('🗑️ [Backend] Deleting task:', id);
     
-    // TODO: Replace with actual database query
-    // const result = await db.query('DELETE FROM tasks WHERE id = ?', [id]);
+    // Check if task exists and belongs to user
+    const task = await db.queryOne(
+      `SELECT * FROM tasks 
+       WHERE id = ? AND user_id = ? AND is_active = TRUE`,
+      [id, userId]
+    );
     
-    const taskIndex = tasks.findIndex(t => t.id === id);
-    
-    if (taskIndex === -1) {
-      console.log(`⚠️ [Backend] Task not found for deletion: ${id}`);
+    if (!task) {
       return res.status(404).json({
         success: false,
         message: 'Task not found'
       });
     }
     
-    const deletedTask = tasks.splice(taskIndex, 1)[0];
-    console.log(`✅ [Backend] Task deleted: "${deletedTask.name}"`);
-    console.log(`📊 [Backend] Remaining tasks: ${tasks.length}`);
+    // Check if this is the last task
+    const taskCount = await db.queryOne(
+      `SELECT COUNT(*) as count FROM tasks 
+       WHERE user_id = ? AND is_active = TRUE`,
+      [userId]
+    );
     
-    return res.status(200).json({
+    if (taskCount.count <= 1) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot delete the last task. At least one task must remain.'
+      });
+    }
+    
+    // Soft delete (set is_active to false)
+    await db.query(
+      `UPDATE tasks SET is_active = FALSE WHERE id = ?`,
+      [id]
+    );
+    
+    console.log('✅ [Backend] Task deleted successfully:', task.name);
+    
+    res.status(200).json({
       success: true,
-      data: deletedTask,
       message: 'Task deleted successfully'
     });
   } catch (error) {
     console.error('❌ [Backend] Error deleting task:', error);
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
-      message: 'Failed to delete task'
+      message: 'Failed to delete task',
+      error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
     });
   }
 };
-

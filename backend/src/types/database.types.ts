@@ -19,6 +19,7 @@ export interface Task {
   id: string;
   user_id: string;
   name: string;
+  // AI Model Settings
   personality: string;
   response_speed: number;
   creativity: number;
@@ -28,6 +29,15 @@ export interface Task {
   max_tokens: number;
   system_prompt: string;
   task_prompt: string | null;
+  // System Configuration (Task-specific)
+  llama_base_url: string;
+  llama_service_url: string | null;
+  llama_api_key: string | null;
+  openai_api_key: string | null;
+  anthropic_api_key: string | null;
+  default_model: string | null;
+  auto_update_robot_list: boolean;
+  // Metadata
   is_active: boolean;
   created_at: Date;
   updated_at: Date;
@@ -46,15 +56,6 @@ export interface AIModel {
   updated_at: Date;
 }
 
-export interface SystemConfig {
-  id: number;
-  user_id: string;
-  config_key: string;
-  config_value: string | null;
-  is_encrypted: boolean;
-  created_at: Date;
-  updated_at: Date;
-}
 
 // ============================================
 // View Types
@@ -100,11 +101,6 @@ export interface CreateTaskRequest {
 
 export interface UpdateTaskRequest extends Partial<CreateTaskRequest> {}
 
-export interface SystemConfigRequest {
-  config_key: string;
-  config_value: string;
-  is_encrypted?: boolean;
-}
 
 // ============================================
 // Database Response Types
@@ -140,6 +136,3 @@ export interface GetModelsByProviderParams {
   provider: string;
 }
 
-export interface GetUserConfigParams {
-  user_id: string;
-}
