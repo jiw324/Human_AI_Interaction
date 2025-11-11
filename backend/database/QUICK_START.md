@@ -93,26 +93,22 @@ Look for: `✅ Database connected successfully`
 
 ## 🗄️ Database Structure
 
-**8 Tables:**
-1. `users` - User accounts
+**4 Core Tables:**
+1. `users` - User accounts & authentication
 2. `tasks` - AI task configurations
-3. `ai_models` - Available AI models
-4. `conversations` - Chat history
-5. `messages` - Chat messages
-6. `system_config` - User settings
-7. `session_tokens` - JWT sessions
-8. `activity_logs` - Activity tracking
+3. `ai_models` - Available AI models (16 pre-loaded)
+4. `system_config` - User settings
 
-**3 Views:**
-- `view_user_tasks`
-- `view_conversation_summary`
-- `view_user_activity`
+**Note:** Conversations, messages, sessions, and activity logs will be added when those features are implemented.
 
-**4 Stored Procedures:**
-- `sp_create_conversation()`
-- `sp_add_message()`
-- `sp_get_user_tasks()`
-- `sp_cleanup_expired_sessions()`
+**2 Views:**
+- `view_user_tasks` - Tasks with user details
+- `view_user_activity` - User activity summary
+
+**3 Stored Procedures:**
+- `sp_get_user_tasks()` - Get tasks for a user
+- `sp_get_models_by_provider()` - Get AI models by provider
+- `sp_get_user_config()` - Get user configuration
 
 ---
 

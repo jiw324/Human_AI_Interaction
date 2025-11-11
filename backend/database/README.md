@@ -113,35 +113,25 @@ SELECT * FROM view_user_tasks;
 
 ## 📊 Database Schema Overview
 
-### Tables
+### Tables (Core Only - 4 Tables)
 
 1. **users** - User accounts and authentication
 2. **tasks** - AI task configurations with settings
 3. **ai_models** - Available AI models catalog
-4. **conversations** - Chat conversation metadata
-5. **messages** - Individual chat messages
-6. **system_config** - User-specific system configuration
-7. **session_tokens** - JWT session management
-8. **activity_logs** - User activity tracking
+4. **system_config** - User-specific system configuration
+
+**Note:** Conversations, messages, session tokens, and activity logs will be added when those features are implemented.
 
 ### Views
 
 - **view_user_tasks** - User tasks with full details
-- **view_conversation_summary** - Conversation statistics
 - **view_user_activity** - User activity summary
 
 ### Stored Procedures
 
-- **sp_create_conversation** - Create conversation with initial message
-- **sp_add_message** - Add message and update conversation
 - **sp_get_user_tasks** - Retrieve user's tasks
-- **sp_cleanup_expired_sessions** - Clean expired sessions
-
-### Triggers
-
-- **trg_task_created** - Log task creation
-- **trg_task_updated** - Log task updates
-- **trg_task_deleted** - Log task deletion
+- **sp_get_models_by_provider** - Get AI models by provider
+- **sp_get_user_config** - Get user configuration settings
 
 ## 🔐 Default Credentials
 
@@ -159,8 +149,9 @@ SELECT * FROM view_user_tasks;
 
 The schema includes:
 - 1 admin user
-- 4 default tasks (Task 1-4)
+- 4 default tasks (Task 1-4 with different personalities)
 - 16 AI models (Claude, GPT, Llama, Mistral, Titan, Nova)
+- Empty system_config table (ready for user configurations)
 
 ## 🛠️ Maintenance
 

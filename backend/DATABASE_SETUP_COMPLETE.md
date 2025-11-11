@@ -33,31 +33,22 @@ backend/
 
 ## 🗄️ Database Schema Highlights
 
-### 📊 8 Tables Created
+### 📊 4 Core Tables Created
 1. **users** - User accounts & authentication
 2. **tasks** - AI task configurations (what you're using now!)
 3. **ai_models** - 16 pre-loaded AI models
-4. **conversations** - Chat history metadata
-5. **messages** - Individual chat messages
-6. **system_config** - User-specific settings
-7. **session_tokens** - JWT session management
-8. **activity_logs** - Activity tracking & auditing
+4. **system_config** - User-specific settings
 
-### 📈 3 Database Views
+**Note:** Conversations, messages, session tokens, and activity logs will be added when those features are implemented.
+
+### 📈 2 Database Views
 - `view_user_tasks` - Tasks with user details
-- `view_conversation_summary` - Conversation statistics
 - `view_user_activity` - User activity summary
 
-### ⚙️ 4 Stored Procedures
-- `sp_create_conversation()` - Create conversation with message
-- `sp_add_message()` - Add message & update counts
+### ⚙️ 3 Stored Procedures
 - `sp_get_user_tasks()` - Retrieve user's tasks
-- `sp_cleanup_expired_sessions()` - Clean expired sessions
-
-### 🔔 3 Triggers
-- `trg_task_created` - Log task creation
-- `trg_task_updated` - Log task updates
-- `trg_task_deleted` - Log task deletion
+- `sp_get_models_by_provider()` - Get AI models by provider
+- `sp_get_user_config()` - Get user configuration settings
 
 ---
 
@@ -290,18 +281,17 @@ Run: `npx ts-node backend/test-connection.ts`
 
 ## ✨ What You Get
 
-✅ Production-ready MySQL schema
+✅ Clean, focused MySQL schema (4 core tables)
 ✅ TypeScript type safety
 ✅ Connection pooling
 ✅ Transaction support
-✅ Stored procedures
-✅ Activity logging
-✅ Automated cleanup
-✅ Default data included
+✅ Stored procedures for common queries
+✅ Default data included (users, tasks, AI models)
 ✅ Comprehensive documentation
 ✅ Setup automation scripts
 ✅ Backup/restore commands
 ✅ Security best practices
+✅ Ready to expand when needed
 
 ---
 

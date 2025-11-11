@@ -1,5 +1,6 @@
 // ============================================
 // Database Type Definitions
+// Core Tables Only (Simplified Version)
 // ============================================
 
 export interface User {
@@ -45,31 +46,6 @@ export interface AIModel {
   updated_at: Date;
 }
 
-export interface Conversation {
-  id: string;
-  user_id: string;
-  task_id: string | null;
-  title: string;
-  ai_model_id: string | null;
-  ai_model_name: string | null;
-  ai_greeting: string | null;
-  ai_personality: string | null;
-  ai_icon: string | null;
-  message_count: number;
-  created_at: Date;
-  updated_at: Date;
-  last_message_at: Date;
-}
-
-export interface Message {
-  id: string;
-  conversation_id: string;
-  sender: 'user' | 'ai';
-  content: string;
-  tokens_used: number;
-  created_at: Date;
-}
-
 export interface SystemConfig {
   id: number;
   user_id: string;
@@ -78,27 +54,6 @@ export interface SystemConfig {
   is_encrypted: boolean;
   created_at: Date;
   updated_at: Date;
-}
-
-export interface SessionToken {
-  id: number;
-  user_id: string;
-  token_hash: string;
-  expires_at: Date;
-  is_revoked: boolean;
-  created_at: Date;
-}
-
-export interface ActivityLog {
-  id: number;
-  user_id: string | null;
-  action: string;
-  entity_type: string | null;
-  entity_id: string | null;
-  details: any; // JSON object
-  ip_address: string | null;
-  user_agent: string | null;
-  created_at: Date;
 }
 
 // ============================================
@@ -110,26 +65,12 @@ export interface ViewUserTask extends Task {
   email: string;
 }
 
-export interface ViewConversationSummary {
-  id: string;
-  user_id: string;
-  title: string;
-  ai_model_name: string | null;
-  message_count: number;
-  created_at: Date;
-  last_message_at: Date;
-  username: string;
-  actual_message_count: number;
-}
-
 export interface ViewUserActivity {
   user_id: string;
   username: string;
   email: string;
   task_count: number;
-  conversation_count: number;
-  message_count: number;
-  last_activity: Date | null;
+  last_login: Date | null;
   user_since: Date;
 }
 
@@ -159,17 +100,10 @@ export interface CreateTaskRequest {
 
 export interface UpdateTaskRequest extends Partial<CreateTaskRequest> {}
 
-export interface CreateConversationRequest {
-  task_id?: string;
-  title: string;
-  ai_model_name?: string;
-  initial_message?: string;
-}
-
-export interface CreateMessageRequest {
-  sender: 'user' | 'ai';
-  content: string;
-  tokens_used?: number;
+export interface SystemConfigRequest {
+  config_key: string;
+  config_value: string;
+  is_encrypted?: boolean;
 }
 
 // ============================================
@@ -198,18 +132,14 @@ export interface PaginatedResponse<T> {
 // Stored Procedure Parameter Types
 // ============================================
 
-export interface CreateConversationParams {
+export interface GetUserTasksParams {
   user_id: string;
-  task_id?: string;
-  title: string;
-  ai_model_name?: string;
-  initial_message?: string;
 }
 
-export interface AddMessageParams {
-  conversation_id: string;
-  sender: 'user' | 'ai';
-  content: string;
-  tokens_used?: number;
+export interface GetModelsByProviderParams {
+  provider: string;
 }
 
+export interface GetUserConfigParams {
+  user_id: string;
+}
