@@ -144,7 +144,7 @@ function App() {
 
   const handleLoadConversation = (conversation: Conversation) => {
     navigate('/');
-    console.log('Loading conversation:', conversation);
+    // TODO: Implement conversation loading logic
   };
 
   const handleDeleteConversation = (conversationId: string) => {

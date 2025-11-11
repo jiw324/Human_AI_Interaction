@@ -248,13 +248,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({ aiSettingsByModel, onSaveConversation
     }
   };
 
-  const handleNewChat = () => {
-    // Clear current chat from localStorage
-    localStorage.removeItem('currentChat');
-    // Reload the page to start fresh
-    window.location.reload();
-  };
-
   return (
     <div className="chat-container">
       <div className="chat-header">
@@ -265,13 +258,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({ aiSettingsByModel, onSaveConversation
           <h3>{selectedModel.name}</h3>
           <span className="status">Online • {selectedModel.personality}</span>
         </div>
-        <button 
-          onClick={handleNewChat}
-          className="new-chat-btn"
-          title="Start a new chat"
-        >
-          + New Chat
-        </button>
       </div>
       
       <div className="chat-messages">
