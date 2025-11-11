@@ -18,7 +18,7 @@ export interface AIModel {
 
 export interface AISettings {
   personality: string;
-  responseSpeed: string;
+  responseSpeed: number;
   creativity: number;
   helpfulness: number;
   verbosity: number;
@@ -273,6 +273,114 @@ export const healthAPI = {
       return data.status === 'ok';
     } catch (error) {
       console.error('Health check error:', error);
+      return false;
+    }
+  }
+};
+
+// Task interface
+export interface Task {
+  id: string;
+  name: string;
+  settings: AISettings;
+}
+
+// Tasks API
+export const tasksAPI = {
+  getAll: async (): Promise<Task[]> => {
+    try {
+      console.log('📡 Fetching tasks from backend...');
+      const response = await fetchAPI('/tasks');
+      const data = await response.json();
+
+      if (data.success) {
+        console.log('✅ Tasks loaded successfully:', data.data);
+        console.log(`📊 Total tasks: ${data.data.length}`);
+        return data.data;
+      }
+      console.warn('⚠️ Backend returned unsuccessful response');
+      return [];
+    } catch (error) {
+      console.error('❌ Get tasks error:', error);
+      return [];
+    }
+  },
+
+  getById: async (id: string): Promise<Task | null> => {
+    try {
+      const response = await fetchAPI(`/tasks/${id}`);
+      const data = await response.json();
+
+      if (data.success) {
+        return data.data;
+      }
+      return null;
+    } catch (error) {
+      console.error('Get task error:', error);
+      return null;
+    }
+  },
+
+  create: async (name: string, settings: AISettings): Promise<Task | null> => {
+    try {
+      console.log(`➕ Creating new task: "${name}"`);
+      const response = await fetchAPI('/tasks', {
+        method: 'POST',
+        body: JSON.stringify({ name, settings })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        console.log('✅ Task created successfully:', data.data);
+        return data.data;
+      }
+      console.warn('⚠️ Failed to create task');
+      return null;
+    } catch (error) {
+      console.error('❌ Create task error:', error);
+      return null;
+    }
+  },
+
+  update: async (id: string, name?: string, settings?: AISettings): Promise<Task | null> => {
+    try {
+      console.log(`🔄 Updating task: ${id}`, { name, settings });
+      const response = await fetchAPI(`/tasks/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ name, settings })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        console.log('✅ Task updated successfully:', data.data);
+        return data.data;
+      }
+      console.warn('⚠️ Failed to update task');
+      return null;
+    } catch (error) {
+      console.error('❌ Update task error:', error);
+      return null;
+    }
+  },
+
+  delete: async (id: string): Promise<boolean> => {
+    try {
+      console.log(`🗑️ Deleting task: ${id}`);
+      const response = await fetchAPI(`/tasks/${id}`, {
+        method: 'DELETE'
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        console.log('✅ Task deleted successfully');
+        return true;
+      }
+      console.warn('⚠️ Failed to delete task');
+      return false;
+    } catch (error) {
+      console.error('❌ Delete task error:', error);
       return false;
     }
   }

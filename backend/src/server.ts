@@ -7,6 +7,7 @@ import authRoutes from './routes/auth.routes';
 import chatRoutes from './routes/chat.routes';
 import settingsRoutes from './routes/settings.routes';
 import conversationRoutes from './routes/conversation.routes';
+import taskRoutes from './routes/task.routes';
 import { errorHandler } from './middleware/error.middleware';
 
 // Load environment variables
@@ -51,8 +52,17 @@ app.use(morgan('dev')); // Logging
 app.use(express.json()); // Parse JSON bodies
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
 
+// Request logger middleware
+app.use((req, res, next) => {
+  console.log(`\n📨 [${new Date().toLocaleTimeString()}] ${req.method} ${req.url}`);
+  console.log(`   Origin: ${req.headers.origin || 'no origin'}`);
+  console.log(`   Auth: ${req.headers.authorization ? '✅ Token present' : '❌ No token'}`);
+  next();
+});
+
 // Health check endpoint
 app.get('/api/health', (_req, res) => {
+  console.log('✅ Health check requested');
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
@@ -65,6 +75,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/conversations', conversationRoutes);
+app.use('/api/tasks', taskRoutes);
 
 // 404 handler
 app.use((req, res) => {

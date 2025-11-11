@@ -1,4 +1,5 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { tasksAPI, type Task } from '../services/api';
 import './ResearchPanel.css';
 
 interface AISettings {
@@ -14,9 +15,8 @@ interface AISettings {
 }
 
 interface ResearchPanelProps {
-  settingsByModel: Record<string, AISettings>;
-  onModelSettingsChange: (model: string, settings: AISettings) => void;
-  modelNames: string[];
+  tasks: Task[];
+  onTasksChange: (tasks: Task[]) => void;
 }
 
 interface ModelInfo {
@@ -27,12 +27,25 @@ interface ModelInfo {
   status: 'available' | 'unknown';
 }
 
-const ResearchPanel: React.FC<ResearchPanelProps> = ({ settingsByModel, onModelSettingsChange, modelNames }) => {
-  const [activeTask, setActiveTask] = useState<string>(modelNames[0]);
-  const [tasks, setTasks] = useState<string[]>(modelNames);
+const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) => {
+  const [activeTaskId, setActiveTaskId] = useState<string>(tasks[0]?.id || '');
   const [newTaskName, setNewTaskName] = useState<string>('');
   const [viewMode, setViewMode] = useState<'tasks' | 'config'>('tasks');
   const isAddingTask = useRef(false);
+  
+  // Log when tasks are received
+  useEffect(() => {
+    console.log('📋 ResearchPanel received tasks:', tasks);
+    console.log(`📊 Active Task ID: ${activeTaskId}`);
+  }, [tasks, activeTaskId]);
+  
+  // Update active task if tasks change and current active task doesn't exist
+  useEffect(() => {
+    if (tasks.length > 0 && !tasks.find(t => t.id === activeTaskId)) {
+      console.log(`⚠️ Active task ${activeTaskId} not found, switching to first task`);
+      setActiveTaskId(tasks[0].id);
+    }
+  }, [tasks, activeTaskId]);
   
   // System Config State
   const [llamaBaseUrl, setLlamaBaseUrl] = useState<string>(
@@ -133,11 +146,29 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ settingsByModel, onModelS
   ]);
   
   // Safety check
-  if (!settingsByModel || !modelNames) {
+  if (!tasks || tasks.length === 0) {
     return (
       <div className="research-panel">
-        <h2>Research Panel</h2>
-        <p>Error: Missing required props</p>
+        <div className="panel-header">
+          <h2>AI Research Panel</h2>
+        </div>
+        <div className="panel-content">
+          <p>No tasks available. Please check your connection.</p>
+        </div>
+      </div>
+    );
+  }
+  
+  const activeTask = tasks.find(t => t.id === activeTaskId);
+  if (!activeTask) {
+    return (
+      <div className="research-panel">
+        <div className="panel-header">
+          <h2>AI Research Panel</h2>
+        </div>
+        <div className="panel-content">
+          <p>Task not found.</p>
+        </div>
       </div>
     );
   }
@@ -151,19 +182,30 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ settingsByModel, onModelS
     { value: 'expert', label: 'Expert & Authoritative' }
   ];
 
-  const handleSettingChange = (model: string, key: keyof AISettings, value: string | number) => {
-    const current = settingsByModel[model];
-    const newSettings = { ...current, [key]: value };
-    onModelSettingsChange(model, newSettings);
+  const handleSettingChange = (key: keyof AISettings, value: string | number) => {
+    if (!activeTask) return;
+    
+    const newSettings = { ...activeTask.settings, [key]: value };
+    const updatedTasks = tasks.map(t =>
+      t.id === activeTaskId ? { ...t, settings: newSettings } : t
+    );
+    onTasksChange(updatedTasks);
   };
 
-  const handleUpdate = () => {
-    // Settings are already saved in real-time via handleSettingChange
-    // This provides visual feedback
-    alert('Settings updated successfully!');
+  const handleUpdate = async () => {
+    if (!activeTask) return;
+    
+    try {
+      await tasksAPI.update(activeTask.id, undefined, activeTask.settings);
+      alert('Settings updated successfully!');
+    } catch (error) {
+      alert('Failed to update settings. Please try again.');
+    }
   };
 
-  const resetToDefaults = () => {
+  const resetToDefaults = async () => {
+    if (!activeTask) return;
+    
     const defaultSettings: AISettings = {
       personality: 'friendly',
       responseSpeed: 1.0,
@@ -175,29 +217,44 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ settingsByModel, onModelS
       systemPrompt: 'You are a helpful AI assistant. Be friendly, informative, and engaging in your responses.',
       taskPrompt: ''
     };
-    onModelSettingsChange(activeTask, defaultSettings);
+    
+    try {
+      const updatedTask = await tasksAPI.update(activeTask.id, undefined, defaultSettings);
+      if (updatedTask) {
+        const updatedTasks = tasks.map(t =>
+          t.id === activeTaskId ? updatedTask : t
+        );
+        onTasksChange(updatedTasks);
+        alert('Settings reset to defaults!');
+      }
+    } catch (error) {
+      alert('Failed to reset settings. Please try again.');
+    }
   };
 
-  const addTask = () => {
-    // Prevent multiple simultaneous additions
+  const addTask = async () => {
+    // FIRST: Check lock to prevent any duplicate calls
     if (isAddingTask.current) {
+      console.warn('addTask called while already adding, ignoring');
       return;
     }
+    
+    // SECOND: Set lock immediately
+    isAddingTask.current = true;
     
     const trimmedName = newTaskName.trim();
     
     if (trimmedName === '') {
+      isAddingTask.current = false; // Reset lock
       alert('Please enter a task name');
       return;
     }
     
-    if (tasks.includes(trimmedName)) {
+    if (tasks.some(t => t.name === trimmedName)) {
+      isAddingTask.current = false; // Reset lock
       alert('Task name already exists');
       return;
     }
-    
-    // Set flag to prevent duplicate calls
-    isAddingTask.current = true;
     
     const defaultSettings: AISettings = {
       personality: 'friendly',
@@ -211,30 +268,55 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ settingsByModel, onModelS
       taskPrompt: ''
     };
     
-    // Use functional update to ensure we're working with the latest state
-    setTasks(prevTasks => [...prevTasks, trimmedName]);
-    onModelSettingsChange(trimmedName, defaultSettings);
-    setActiveTask(trimmedName);
-    setNewTaskName('');
-    
-    // Reset flag after a short delay
-    setTimeout(() => {
-      isAddingTask.current = false;
-    }, 100);
+    try {
+      const newTask = await tasksAPI.create(trimmedName, defaultSettings);
+      
+      if (newTask) {
+        onTasksChange([...tasks, newTask]);
+        setActiveTaskId(newTask.id);
+        setNewTaskName('');
+        alert('Task created successfully!');
+      } else {
+        alert('Failed to create task. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error creating task:', error);
+      alert('Failed to create task. Please try again.');
+    } finally {
+      // Reset flag after operation completes
+      setTimeout(() => {
+        isAddingTask.current = false;
+      }, 300);
+    }
   };
 
-  const deleteTask = (taskName: string) => {
+  const deleteTask = async (taskId: string) => {
     if (tasks.length <= 1) {
       alert('Cannot delete the last task');
       return;
     }
     
-    if (window.confirm(`Are you sure you want to delete task "${taskName}"?`)) {
-      const newTasks = tasks.filter(t => t !== taskName);
-      setTasks(newTasks);
-      
-      if (activeTask === taskName) {
-        setActiveTask(newTasks[0]);
+    const taskToDelete = tasks.find(t => t.id === taskId);
+    if (!taskToDelete) return;
+    
+    if (window.confirm(`Are you sure you want to delete task "${taskToDelete.name}"?`)) {
+      try {
+        const success = await tasksAPI.delete(taskId);
+        
+        if (success) {
+          const newTasks = tasks.filter(t => t.id !== taskId);
+          onTasksChange(newTasks);
+          
+          if (activeTaskId === taskId) {
+            setActiveTaskId(newTasks[0].id);
+          }
+          alert('Task deleted successfully!');
+        } else {
+          alert('Failed to delete task. Please try again.');
+        }
+      } catch (error) {
+        console.error('Error deleting task:', error);
+        alert('Failed to delete task. Please try again.');
       }
     }
   };
@@ -268,16 +350,7 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ settingsByModel, onModelS
     }
   };
 
-  const settings = settingsByModel[activeTask];
-
-  if (!settings) {
-    return (
-      <div className="research-panel">
-        <h2>Research Panel</h2>
-        <p>Settings not found for this task.</p>
-      </div>
-    );
-  }
+  const settings = activeTask.settings;
 
   return (
     <div className="research-panel">
@@ -330,23 +403,23 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ settingsByModel, onModelS
           </div>
 
           <div className="tasks-list">
-            {tasks.map((taskName) => (
+            {tasks.map((task) => (
               <div
-                key={taskName}
-                className={`task-item ${activeTask === taskName ? 'active' : ''}`}
+                key={task.id}
+                className={`task-item ${activeTaskId === task.id ? 'active' : ''}`}
               >
                 <button
                   type="button"
                   className="task-select-btn"
-                  onClick={() => setActiveTask(taskName)}
+                  onClick={() => setActiveTaskId(task.id)}
                 >
-                  <span className="task-name">{taskName}</span>
-                  {activeTask === taskName && <span className="active-badge">Active</span>}
+                  <span className="task-name">{task.name}</span>
+                  {activeTaskId === task.id && <span className="active-badge">Active</span>}
                 </button>
                 <button
                   type="button"
                   className="task-delete-btn"
-                  onClick={() => deleteTask(taskName)}
+                  onClick={() => deleteTask(task.id)}
                   title="Delete task"
                 >
                   ✕
@@ -358,7 +431,7 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ settingsByModel, onModelS
 
         {/* Current Task Configuration */}
         <div className="current-task-header">
-          <h3>Configure Task: <span className="task-highlight">{activeTask}</span></h3>
+          <h3>Configure Task: <span className="task-highlight">{activeTask.name}</span></h3>
         </div>
 
         {/* System Prompt and Task Prompt Side by Side */}
@@ -368,7 +441,7 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ settingsByModel, onModelS
             <div className="setting-group full-width">
               <textarea
                 value={settings.systemPrompt}
-                onChange={(e) => handleSettingChange(activeTask, 'systemPrompt', e.target.value)}
+                onChange={(e) => handleSettingChange('systemPrompt', e.target.value)}
                 className="setting-textarea"
                 rows={6}
                 placeholder="Enter the system prompt that defines the AI's behavior..."
@@ -381,7 +454,7 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ settingsByModel, onModelS
             <div className="setting-group full-width">
               <textarea
                 value={settings.taskPrompt || ''}
-                onChange={(e) => handleSettingChange(activeTask, 'taskPrompt', e.target.value)}
+                onChange={(e) => handleSettingChange('taskPrompt', e.target.value)}
                 className="setting-textarea"
                 rows={6}
                 placeholder="Enter the specific task prompt or instructions..."
@@ -398,7 +471,7 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ settingsByModel, onModelS
               <label className="setting-label">Personality</label>
               <select
                 value={settings.personality}
-                onChange={(e) => handleSettingChange(activeTask, 'personality', e.target.value)}
+                onChange={(e) => handleSettingChange('personality', e.target.value)}
                 className="setting-select"
               >
                 {personalityOptions.map(option => (
@@ -417,7 +490,7 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ settingsByModel, onModelS
                 max="3.0"
                 step="0.1"
                 value={settings.responseSpeed}
-                onChange={(e) => handleSettingChange(activeTask, 'responseSpeed', parseFloat(e.target.value))}
+                onChange={(e) => handleSettingChange('responseSpeed', parseFloat(e.target.value))}
                 className="setting-slider"
               />
             </div>
@@ -430,7 +503,7 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ settingsByModel, onModelS
                 max="1"
                 step="0.1"
                 value={settings.creativity}
-                onChange={(e) => handleSettingChange(activeTask, 'creativity', parseFloat(e.target.value))}
+                onChange={(e) => handleSettingChange('creativity', parseFloat(e.target.value))}
                 className="setting-slider"
               />
             </div>
@@ -443,7 +516,7 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ settingsByModel, onModelS
                 max="1"
                 step="0.1"
                 value={settings.helpfulness}
-                onChange={(e) => handleSettingChange(activeTask, 'helpfulness', parseFloat(e.target.value))}
+                onChange={(e) => handleSettingChange('helpfulness', parseFloat(e.target.value))}
                 className="setting-slider"
               />
             </div>
@@ -456,7 +529,7 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ settingsByModel, onModelS
                 max="1"
                 step="0.1"
                 value={settings.verbosity}
-                onChange={(e) => handleSettingChange(activeTask, 'verbosity', parseFloat(e.target.value))}
+                onChange={(e) => handleSettingChange('verbosity', parseFloat(e.target.value))}
                 className="setting-slider"
               />
             </div>
@@ -469,7 +542,7 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ settingsByModel, onModelS
                 max="2"
                 step="0.1"
                 value={settings.temperature}
-                onChange={(e) => handleSettingChange(activeTask, 'temperature', parseFloat(e.target.value))}
+                onChange={(e) => handleSettingChange('temperature', parseFloat(e.target.value))}
                 className="setting-slider"
               />
             </div>
@@ -482,7 +555,7 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ settingsByModel, onModelS
                 max="4000"
                 step="100"
                 value={settings.maxTokens}
-                onChange={(e) => handleSettingChange(activeTask, 'maxTokens', parseInt(e.target.value))}
+                onChange={(e) => handleSettingChange('maxTokens', parseInt(e.target.value))}
                 className="setting-slider"
               />
             </div>

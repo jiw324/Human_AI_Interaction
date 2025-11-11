@@ -11,15 +11,19 @@ export const login = async (
 ) => {
   try {
     const { researchKey } = req.body;
+    console.log('🔐 [Backend] Login attempt received');
 
     if (!researchKey) {
+      console.log('❌ [Backend] No research key provided');
       throw new AppError('Research key is required', 400);
     }
 
     // Validate research key
     const validKey = process.env.RESEARCH_KEY || 'admin123';
+    console.log(`🔑 [Backend] Validating key (expected: ${validKey})`);
     
     if (researchKey !== validKey) {
+      console.log('❌ [Backend] Invalid research key');
       throw new AppError('Invalid research key', 401);
     }
 
@@ -31,12 +35,16 @@ export const login = async (
       expiresIn: '24h'
     });
 
+    console.log('✅ [Backend] Login successful, token generated');
+    console.log(`👤 [Backend] User ID: ${userId}`);
+
     res.json({
       success: true,
       token,
       message: 'Login successful'
     });
   } catch (error) {
+    console.error('❌ [Backend] Login error:', error);
     next(error);
   }
 };

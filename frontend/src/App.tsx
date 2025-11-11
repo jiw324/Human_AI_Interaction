@@ -4,7 +4,7 @@ import ChatBox from './components/ChatBox'
 import ResearchPanel from './components/ResearchPanel'
 import ConversationHistory from './components/ConversationHistory'
 import LoginPage from './components/LoginPage'
-import { authService, healthAPI } from './services/api'
+import { authService, healthAPI, tasksAPI, type Task } from './services/api'
 import './App.css'
 
 interface AISettings {
@@ -49,8 +49,8 @@ function App() {
   });
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking');
-
-  const modelNames: string[] = ['Task 1', 'Task 2', 'Task 3', 'Task 4'];
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [tasksLoading, setTasksLoading] = useState<boolean>(true);
 
   const defaultSettings: AISettings = {
     personality: 'friendly',
@@ -100,6 +100,24 @@ function App() {
     };
     checkBackend();
   }, []);
+
+  // Load tasks from backend when logged in
+  useEffect(() => {
+    const loadTasks = async () => {
+      if (isLoggedIn && backendStatus === 'online') {
+        console.log('🔐 User logged in, loading tasks from backend...');
+        setTasksLoading(true);
+        const fetchedTasks = await tasksAPI.getAll();
+        console.log('📦 Tasks received in App.tsx:', fetchedTasks);
+        setTasks(fetchedTasks);
+        setTasksLoading(false);
+        console.log('✨ Tasks state updated in App');
+      } else {
+        console.log('⏸️ Not loading tasks:', { isLoggedIn, backendStatus });
+      }
+    };
+    loadTasks();
+  }, [isLoggedIn, backendStatus]);
 
   // Load conversations from localStorage on mount
   useEffect(() => {
@@ -254,11 +272,16 @@ function App() {
             element={
               <ProtectedRoute>
                 <div className="research-section">
-                  <ResearchPanel 
-                    settingsByModel={aiSettingsByModel}
-                    onModelSettingsChange={handleSettingsChangeForModel}
-                    modelNames={modelNames}
-                  />
+                  {tasksLoading ? (
+                    <div style={{ padding: '40px', textAlign: 'center' }}>
+                      <p>Loading tasks...</p>
+                    </div>
+                  ) : (
+                    <ResearchPanel 
+                      tasks={tasks}
+                      onTasksChange={setTasks}
+                    />
+                  )}
                 </div>
               </ProtectedRoute>
             } 
