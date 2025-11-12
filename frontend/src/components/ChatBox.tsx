@@ -27,6 +27,53 @@ interface ChatBoxProps {
 }
 
 const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
+  // Check if no tasks are available
+  if (tasks.length === 0) {
+    return (
+      <div className="chat-container">
+        <div className="chat-messages" style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          height: '100%',
+          padding: '40px'
+        }}>
+          <div style={{ 
+            textAlign: 'center',
+            maxWidth: '400px',
+            background: '#fff3cd',
+            padding: '30px',
+            borderRadius: '12px',
+            border: '2px solid #ffc107'
+          }}>
+            <div style={{ fontSize: '48px', marginBottom: '20px' }}>⚠️</div>
+            <h2 style={{ margin: '0 0 15px 0', color: '#856404', fontSize: '24px' }}>No Tasks Found</h2>
+            <p style={{ margin: '0 0 20px 0', color: '#856404', fontSize: '16px', lineHeight: '1.5' }}>
+              Please create a task in the Research Panel to start chatting.
+            </p>
+            <a 
+              href="/research" 
+              style={{ 
+                display: 'inline-block',
+                padding: '12px 24px',
+                background: '#ffc107',
+                color: '#000',
+                textDecoration: 'none',
+                borderRadius: '6px',
+                fontWeight: '600',
+                transition: 'background 0.3s'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.background = '#ffb300'}
+              onMouseOut={(e) => e.currentTarget.style.background = '#ffc107'}
+            >
+              Go to Research Panel
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Convert tasks to AI models format
   const aiModels = tasks.map((task, index) => ({
     name: task.name,
@@ -46,21 +93,27 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
         console.error('Error parsing saved chat:', error);
       }
     }
-    // Select first task or fallback
+    // Randomly select a task for first-time users
     if (tasks.length > 0) {
+      const randomIndex = Math.floor(Math.random() * tasks.length);
+      const randomTask = tasks[randomIndex];
+      const icons = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
+      
+      console.log(`🎲 First visit - randomly selected task: ${randomTask.name} (${randomIndex + 1}/${tasks.length})`);
+      
       return {
-        name: tasks[0].name,
-        greeting: tasks[0].settings.taskPrompt || `Hello! You are chatting with ${tasks[0].name}. How can I help you today?`,
-        personality: tasks[0].settings.personality,
-        icon: '1️⃣'
+        name: randomTask.name,
+        greeting: randomTask.settings.taskPrompt || `Hello! You are chatting with ${randomTask.name}. How can I help you today?`,
+        personality: randomTask.settings.personality,
+        icon: icons[randomIndex] || '💬'
       };
     }
-    // Fallback if no tasks
+    // Fallback if no tasks (should not reach here due to early return)
     return {
-      name: 'AI Assistant',
-      greeting: 'Hello! How can I help you today?',
+      name: 'No Tasks',
+      greeting: '',
       personality: 'friendly',
-      icon: '💬'
+      icon: '⚠️'
     };
   });
 

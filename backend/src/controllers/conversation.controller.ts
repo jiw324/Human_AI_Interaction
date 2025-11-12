@@ -15,12 +15,13 @@ async function ensureUserExists(userId: string): Promise<void> {
     
     if (!existingUser) {
       // Auto-create user record for this device
+      // Use full device ID as username to avoid collisions
       await db.query(
         `INSERT INTO users (id, username, email, password_hash, research_key) 
          VALUES (?, ?, ?, ?, ?)`,
         [
           userId,
-          `device_${userId.substring(0, 8)}`, // Username: device_xxxxxxxx
+          userId, // Use full device ID as username (guaranteed unique)
           `${userId}@device.local`, // Email: deviceid@device.local
           '', // No password for device users
           null // NULL for research_key (empty string would violate UNIQUE constraint)
