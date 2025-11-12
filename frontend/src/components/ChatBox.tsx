@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import './ChatBox.css';
 import { chatAPI, conversationsAPI, type Message, type Conversation, type AIModel } from '../services/api';
 import { getDeviceId } from '../utils/deviceId';
+import { v4 as uuidv4 } from 'uuid';
 
 interface AISettings {
   personality: string;
@@ -13,6 +14,7 @@ interface AISettings {
   maxTokens: number;
   systemPrompt: string;
   taskPrompt: string;
+  defaultModel?: string;
 }
 
 interface Task {
@@ -122,14 +124,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
   // Conversation ID - will be set when loading existing conversation or creating new one
   const [conversationId, setConversationId] = useState<string>('');
 
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      text: selectedModel.greeting,
-      sender: 'ai' as const,
-      timestamp: new Date()
-    }
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   
   const [isLoadingMessages, setIsLoadingMessages] = useState(true);
 
@@ -150,6 +145,9 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
     systemPrompt: 'You are a helpful AI assistant.',
     taskPrompt: ''
   };
+
+  // Get current greeting from task prompt
+  const currentGreeting = currentSettings.taskPrompt || `Hello! You are chatting with ${selectedModel.name}. How can I help you today?`;
 
   // Load messages from backend or localStorage on mount
   useEffect(() => {
@@ -222,15 +220,19 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
         console.error('⚠️ Backend error:', error);
       }
       
-      // Final fallback: create new conversation with new ID
-      const newConversationId = Date.now().toString();
+      // Final fallback: create new conversation with new ID (UUID)
+      const newConversationId = uuidv4();
       setConversationId(newConversationId);
       console.log('🆕 Starting new conversation with ID:', newConversationId);
       
+      // Use current task prompt as greeting
+      const greeting = currentSettings.taskPrompt || `Hello! You are chatting with ${selectedModel.name}. How can I help you today?`;
+      console.log('📝 Using task prompt as initial greeting:', greeting);
+      
       setMessages([
         {
-          id: '1',
-          text: selectedModel.greeting,
+          id: uuidv4(),
+          text: greeting,
           sender: 'ai' as const,
           timestamp: new Date()
         }
@@ -251,18 +253,21 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
 
   // Save current chat to localStorage whenever messages change
   useEffect(() => {
-    if (conversationId) {
+    if (conversationId && messages.length > 0) {
       const conversation = {
         id: conversationId,
         title: `Chat with ${selectedModel.name}`,
-        aiModel: selectedModel,
+        aiModel: {
+          ...selectedModel,
+          greeting: currentGreeting // Always save current greeting
+        },
         messages: messages,
         createdAt: messages[0].timestamp,
         lastMessageAt: messages[messages.length - 1].timestamp
       };
       localStorage.setItem('currentChat', JSON.stringify(conversation));
     }
-  }, [messages, conversationId, selectedModel]);
+  }, [messages, conversationId, selectedModel, currentGreeting]);
 
   // Save conversation to history whenever messages change (debounced)
   useEffect(() => {
@@ -273,7 +278,10 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
         const conversation: Conversation = {
           id: conversationId,
           title: `Chat with ${selectedModel.name}`,
-          aiModel: selectedModel,
+          aiModel: {
+            ...selectedModel,
+            greeting: currentGreeting // Always save current greeting
+          },
           messages: messages,
           createdAt: new Date(messages[0].timestamp),
           lastMessageAt: new Date(messages[messages.length - 1].timestamp)
@@ -285,14 +293,14 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
       // Cleanup timeout on unmount or when dependencies change
       return () => clearTimeout(timeoutId);
     }
-  }, [messages, conversationId, selectedModel.name]); // Removed onSaveConversation from dependencies
+  }, [messages, conversationId, selectedModel.name, currentGreeting]); // Removed onSaveConversation from dependencies
 
   const getAIResponse = async (userMessage: string): Promise<Message | null> => {
     // Convert AI model to backend format
     const aiModel = {
       id: selectedModel.name.toLowerCase().replace(' ', ''),
       name: selectedModel.name,
-      greeting: selectedModel.greeting,
+      greeting: currentGreeting,
       description: selectedModel.personality
     };
 
@@ -335,7 +343,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
     if (!inputText.trim()) return;
 
     const userMessage: Message = {
-      id: Date.now().toString(),
+      id: uuidv4(),
       text: inputText.trim(),
       sender: 'user',
       timestamp: new Date()
@@ -353,7 +361,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
       } else {
         // Fallback error message
         const errorMessage: Message = {
-          id: (Date.now() + 1).toString(),
+          id: uuidv4(),
           text: 'Sorry, I could not connect to the AI service. Please make sure the backend is running on port 3001.',
           sender: 'ai',
           timestamp: new Date()
