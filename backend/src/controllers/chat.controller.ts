@@ -5,7 +5,18 @@ import { v4 as uuidv4 } from 'uuid';
 import { liteLLMService } from '../services/litellm.service';
 import { LiteLLMMessage } from '../types/litellm.types';
 
-// Generate AI response using LiteLLM service
+/**
+ * Generate AI response using LiteLLM service
+ * 
+ * Flow:
+ * 1. System Prompt: Sets the AI's behavior and personality (from task settings)
+ * 2. Task Prompt: Displayed as initial greeting to user (shown in chat UI)
+ * 3. Conversation History: Previous messages for context
+ * 4. User Message: Current user input
+ * 
+ * The System Prompt instructs the AI on HOW to respond
+ * The Task Prompt tells the USER what the task is about
+ */
 const generateAIResponse = async (
   userMessage: string,
   aiModel: any,
@@ -18,8 +29,10 @@ const generateAIResponse = async (
     // Build message history for LiteLLM in the correct format
     const messages: LiteLLMMessage[] = [];
     
-    // Add system prompt if available
+    // 1. Add System Prompt - This sets the AI's behavior and personality
+    // Example: "You are a helpful AI assistant. Be friendly, informative, and engaging."
     if (settings?.systemPrompt) {
+      console.log(`📋 [Chat] Using System Prompt: "${settings.systemPrompt.substring(0, 50)}..."`);
       messages.push({
         role: 'system',
         content: settings.systemPrompt,

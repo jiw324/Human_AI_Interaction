@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { tasksAPI, type Task } from '../services/api';
-import LiteLLMConfigComponent from './LiteLLMConfig';
 import './ResearchPanel.css';
 import './ResearchPanel_additions.css';
 
@@ -170,7 +169,7 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
     llamaApiKey: '',
     openaiApiKey: '',
     anthropicApiKey: '',
-    defaultModel: 'gpt-3.5-turbo',
+    defaultModel: 'gpt-4',
     autoUpdateRobotList: false
   };
   
@@ -316,7 +315,7 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
       llamaApiKey: '',
       openaiApiKey: '',
       anthropicApiKey: '',
-      defaultModel: 'gpt-3.5-turbo',
+      defaultModel: 'gpt-4',
       autoUpdateRobotList: false
     };
     
@@ -383,7 +382,7 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
       llamaApiKey: '',
       openaiApiKey: '',
       anthropicApiKey: '',
-      defaultModel: 'gpt-3.5-turbo',
+      defaultModel: 'gpt-4',
       autoUpdateRobotList: false
     };
     
@@ -557,18 +556,6 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
           </div>
         )}
 
-        {/* LiteLLM Configuration (Always Visible) */}
-        <div className="config-section">
-          <LiteLLMConfigComponent 
-            onModelSelect={(modelId) => {
-              console.log('Selected model:', modelId);
-              if (activeTask) {
-                handleSettingChange('defaultModel', modelId);
-              }
-            }}
-          />
-        </div>
-
         {/* System Prompt and Task Prompt Side by Side */}
         {activeTask && (
           <div className="prompts-container">
@@ -614,6 +601,22 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
         </div>
         )}
 
+        {/* Model Selection */}
+        {activeTask && (
+          <div className="config-section">
+            <h3 className="section-title">Select Model</h3>
+            <div className="setting-group">
+              <label>AI Model</label>
+              <select
+                value={currentSettings.defaultModel || 'gpt-4'}
+                onChange={(e) => handleSettingChange('defaultModel', e.target.value)}
+                className="setting-select"
+              >
+                <option value="gpt-4">GPT-4</option>
+              </select>
+            </div>
+          </div>
+        )}
 
         {/* Divider */}
         {activeTask && (
@@ -667,6 +670,7 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
                       type="button"
                       className="toggle-visibility-btn"
                       onClick={() => setShowLlamaKey(!showLlamaKey)}
+                      disabled
                     >
                       {showLlamaKey ? '🙈' : '👁️'}
                     </button>
@@ -674,10 +678,10 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
                 </div>
 
                 <div className="form-actions">
-                  <button type="button" className="btn-secondary" onClick={handleRefreshModelList}>
+                  <button type="button" className="btn-secondary" onClick={handleRefreshModelList} disabled>
                     🔄 REFRESH MODEL LIST
                   </button>
-                  <button type="button" className="btn-primary" onClick={handleSaveConfiguration}>
+                  <button type="button" className="btn-primary" onClick={handleSaveConfiguration} disabled>
                     💾 SAVE CONFIGURATION
                   </button>
                 </div>
@@ -721,7 +725,7 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
                 </div>
 
                 <div className="form-actions">
-                  <button type="button" className="btn-primary full-width" onClick={handleSaveConfiguration}>
+                  <button type="button" className="btn-primary full-width" onClick={handleSaveConfiguration} disabled>
                     💾 SAVE ALL CONFIGURATIONS
                   </button>
                 </div>
@@ -776,6 +780,7 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
                     type="button"
                     className={`config-tab-btn ${configTab === 'clear' ? 'active' : ''}`}
                     onClick={() => setConfigTab('clear')}
+                    disabled
                   >
                     CLEAR TEST ROBOTS
                   </button>
@@ -783,6 +788,7 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
                     type="button"
                     className={`config-tab-btn ${configTab === 'reset' ? 'active' : ''}`}
                     onClick={() => setConfigTab('reset')}
+                    disabled
                   >
                     ⚠️ RESET AND SYNC ROBOTS
                   </button>
@@ -790,6 +796,7 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
                     type="button"
                     className={`config-tab-btn ${configTab === 'update' ? 'active' : ''}`}
                     onClick={() => setConfigTab('update')}
+                    disabled
                   >
                     🔄 UPDATE ROBOT LIST
                   </button>
@@ -801,7 +808,7 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
                       <p className="tab-description">
                         Clear all test robots from the system. This action cannot be undone.
                       </p>
-                      <button type="button" className="btn-danger" onClick={handleClearTestRobots}>
+                      <button type="button" className="btn-danger" onClick={handleClearTestRobots} disabled>
                         Clear All Test Robots
                       </button>
                     </div>
@@ -812,7 +819,7 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
                       <p className="tab-description">
                         Reset and synchronize all robots with the latest configuration.
                       </p>
-                      <button type="button" className="btn-warning" onClick={handleResetAndSyncRobots}>
+                      <button type="button" className="btn-warning" onClick={handleResetAndSyncRobots} disabled>
                         Reset and Sync Robots
                       </button>
                     </div>
@@ -845,10 +852,10 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
 
         {/* Action Buttons */}
         <div className="action-buttons">
-          <button type="button" className="update-btn" onClick={handleUpdate}>
+          <button type="button" className="update-btn" onClick={handleUpdate} disabled>
             💾 Update All Settings
           </button>
-          <button type="button" className="reset-btn" onClick={resetToDefaults}>
+          <button type="button" className="reset-btn" onClick={resetToDefaults} disabled>
             🔄 Reset to Defaults
           </button>
         </div>

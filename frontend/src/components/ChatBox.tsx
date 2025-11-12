@@ -101,6 +101,8 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
       
       console.log(`🎲 First visit - randomly selected task: ${randomTask.name} (${randomIndex + 1}/${tasks.length})`);
       
+      // Task Prompt is displayed as the initial greeting message to the user
+      // System Prompt is sent to the AI backend to control HOW it responds
       return {
         name: randomTask.name,
         greeting: randomTask.settings.taskPrompt || `Hello! You are chatting with ${randomTask.name}. How can I help you today?`,

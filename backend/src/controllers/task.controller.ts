@@ -26,7 +26,7 @@ const transformTaskFromDB = (dbTask: any) => {
       llamaApiKey: dbTask.llama_api_key || '',
       openaiApiKey: dbTask.openai_api_key || '',
       anthropicApiKey: dbTask.anthropic_api_key || '',
-      defaultModel: dbTask.default_model || '',
+      defaultModel: dbTask.default_model || 'gpt-4',
       autoUpdateRobotList: Boolean(dbTask.auto_update_robot_list)
     }
   };

@@ -384,6 +384,7 @@
   font-family: inherit;
   transition: all 0.3s ease;
   background: white;
+  color: #2c3e50;
 }
 
 .setting-select:focus, .setting-textarea:focus {
@@ -660,6 +661,29 @@
   background: #d97706;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+}
+
+/* Disabled button styles */
+button:disabled,
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-danger:disabled,
+.btn-warning:disabled,
+.update-btn:disabled,
+.reset-btn:disabled,
+.config-tab-btn:disabled,
+.toggle-visibility-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+  background-color: #cccccc !important;
+  color: #666666 !important;
+}
+
+.config-tab-btn:disabled {
+  background: transparent !important;
+  color: #9ca3af !important;
+  border-bottom-color: transparent !important;
 }
 
 /* Available Models Section */

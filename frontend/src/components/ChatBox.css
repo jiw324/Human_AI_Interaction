@@ -167,7 +167,7 @@
 
 .message.user .message-content {
   background: #3b82f6;
-  color: white;
+  color: white !important;
   border-bottom-right-radius: 5px;
 }
 
@@ -184,10 +184,18 @@
   margin-bottom: 5px;
 }
 
+.message.user .message-text {
+  color: white !important;
+}
+
 .message-time {
   font-size: 12px;
   opacity: 0.7;
   text-align: right;
+}
+
+.message.user .message-time {
+  color: white;
 }
 
 .message.ai .message-time {
