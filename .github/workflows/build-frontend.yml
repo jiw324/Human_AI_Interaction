@@ -1,0 +1,55 @@
+name: Build frontend to deploy branch
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install & build
+        working-directory: frontend
+        run: |
+          npm ci
+          # If you use yarn or pnpm, switch commands accordingly
+          npm run build
+
+      - name: Prepare deploy folder
+        run: |
+          mkdir -p web
+          # Vite default -> dist, CRA -> build
+          cp -r frontend/dist/* web/ 2>/dev/null || true
+          cp -r frontend/build/* web/ 2>/dev/null || true
+          # Fallback: if nothing got copied, just ship the raw frontend folder
+          if [ -z "$(ls -A web)" ]; then cp -r frontend/* web/; fi
+
+      - name: Add .htaccess for SPA routing (optional)
+        run: |
+          cat > web/.htaccess <<'EOF'
+          RewriteEngine On
+          RewriteBase /
+          RewriteRule ^index\.html$ - [L]
+          RewriteCond %{REQUEST_FILENAME} !-f
+          RewriteCond %{REQUEST_FILENAME} !-d
+          RewriteRule . /index.html [L]
+          EOF
+
+      - name: Publish deploy branch
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git checkout --orphan deploy
+          git reset --hard
+          rm -rf ./*
+          cp -r web/* .
+          git add -A
+          git commit -m "Deploy $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git push -f origin deploy
