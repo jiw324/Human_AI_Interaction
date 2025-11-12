@@ -612,9 +612,21 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
                 onChange={(e) => handleSettingChange('defaultModel', e.target.value)}
                 className="setting-select"
               >
+                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
                 <option value="gpt-4">GPT-4</option>
+                <option value="gpt-4o">GPT-4o</option>
+                <option value="gpt-4o-mini">GPT-4o Mini</option>
+                <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
+                <option value="claude-3-opus-20240229">Claude 3 Opus</option>
               </select>
             </div>
+            <button
+              type="button"
+              className="btn-update-prompt"
+              onClick={handleUpdate}
+            >
+              💾 Update Model
+            </button>
           </div>
         )}
 
