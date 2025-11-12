@@ -1,28 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { type Conversation } from '../services/api';
 import './ConversationHistory.css';
-
-interface Message {
-  id: string;
-  text: string;
-  sender: 'user' | 'ai';
-  timestamp: Date;
-}
-
-interface AIModel {
-  name: string;
-  greeting: string;
-  personality: string;
-  icon: string;
-}
-
-interface Conversation {
-  id: string;
-  title: string;
-  aiModel: AIModel;
-  messages: Message[];
-  createdAt: Date;
-  lastMessageAt: Date;
-}
 
 interface ConversationHistoryProps {
   conversations: Conversation[];

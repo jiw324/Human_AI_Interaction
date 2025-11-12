@@ -6,12 +6,10 @@ import {
   updateTask,
   deleteTask
 } from '../controllers/task.controller';
-import { authenticate } from '../middleware/auth.middleware';
 
 const router = Router();
 
-// All task routes require authentication
-router.use(authenticate);
+// NOTE: No authentication required - allows managing tasks without login
 
 // GET /api/tasks - Get all tasks
 router.get('/', getAllTasks);

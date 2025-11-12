@@ -1,13 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './ChatBox.css';
-import { chatAPI } from '../services/api';
-
-interface Message {
-  id: string;
-  text: string;
-  sender: 'user' | 'ai';
-  timestamp: Date;
-}
+import { chatAPI, conversationsAPI, type Message, type Conversation, type AIModel } from '../services/api';
+import { getDeviceId } from '../utils/deviceId';
 
 interface AISettings {
   personality: string;
@@ -21,55 +15,25 @@ interface AISettings {
   taskPrompt: string;
 }
 
-interface AIModel {
-  name: string;
-  greeting: string;
-  personality: string;
-  icon: string;
-}
-
-interface Conversation {
+interface Task {
   id: string;
-  title: string;
-  aiModel: AIModel;
-  messages: Message[];
-  createdAt: Date;
-  lastMessageAt: Date;
+  name: string;
+  settings: AISettings;
 }
 
 interface ChatBoxProps {
-  aiSettingsByModel: Record<string, AISettings>;
+  tasks: Task[];
   onSaveConversation: (conversation: Conversation) => void;
 }
 
-const ChatBox: React.FC<ChatBoxProps> = ({ aiSettingsByModel, onSaveConversation }) => {
-  // Define four different AI models/personalities
-  const aiModels = [
-    {
-      name: 'Task 1',
-      greeting: 'Hello! You are chatting with Task 1 (analytical). How can I help you today?',
-      personality: 'analytical',
-      icon: '1️⃣'
-    },
-    {
-      name: 'Task 2',
-      greeting: 'Hi! You are chatting with Task 2 (creative). What would you like to explore?',
-      personality: 'creative',
-      icon: '2️⃣'
-    },
-    {
-      name: 'Task 3',
-      greeting: 'Welcome! You are chatting with Task 3 (expert). What topic should we dive into?',
-      personality: 'expert',
-      icon: '3️⃣'
-    },
-    {
-      name: 'Task 4',
-      greeting: 'Hey there! You are chatting with Task 4 (friendly). What\'s on your mind?',
-      personality: 'friendly',
-      icon: '4️⃣'
-    }
-  ];
+const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
+  // Convert tasks to AI models format
+  const aiModels = tasks.map((task, index) => ({
+    name: task.name,
+    greeting: task.settings.taskPrompt || `Hello! You are chatting with ${task.name}. How can I help you today?`,
+    personality: task.settings.personality,
+    icon: ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'][index] || '💬'
+  }));
 
   // Load or initialize conversation from localStorage
   const [selectedModel] = useState(() => {
@@ -82,8 +46,22 @@ const ChatBox: React.FC<ChatBoxProps> = ({ aiSettingsByModel, onSaveConversation
         console.error('Error parsing saved chat:', error);
       }
     }
-    const randomIndex = Math.floor(Math.random() * aiModels.length);
-    return aiModels[randomIndex];
+    // Select first task or fallback
+    if (tasks.length > 0) {
+      return {
+        name: tasks[0].name,
+        greeting: tasks[0].settings.taskPrompt || `Hello! You are chatting with ${tasks[0].name}. How can I help you today?`,
+        personality: tasks[0].settings.personality,
+        icon: '1️⃣'
+      };
+    }
+    // Fallback if no tasks
+    return {
+      name: 'AI Assistant',
+      greeting: 'Hello! How can I help you today?',
+      personality: 'friendly',
+      icon: '💬'
+    };
   });
 
   const [conversationId] = useState(() => {
@@ -99,38 +77,98 @@ const ChatBox: React.FC<ChatBoxProps> = ({ aiSettingsByModel, onSaveConversation
     return Date.now().toString();
   });
 
-  const [messages, setMessages] = useState<Message[]>(() => {
-    const savedChat = localStorage.getItem('currentChat');
-    if (savedChat) {
-      try {
-        const parsed = JSON.parse(savedChat);
-        // Convert date strings back to Date objects
-        const messagesWithDates = parsed.messages.map((msg: any) => ({
-          ...msg,
-          timestamp: new Date(msg.timestamp)
-        }));
-        return messagesWithDates;
-      } catch (error) {
-        console.error('Error parsing saved chat:', error);
-      }
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: '1',
+      text: selectedModel.greeting,
+      sender: 'ai' as const,
+      timestamp: new Date()
     }
-    // Default greeting message
-    return [
-      {
-        id: '1',
-        text: selectedModel.greeting,
-        sender: 'ai' as const,
-        timestamp: new Date()
-      }
-    ];
-  });
+  ]);
+  
+  const [isLoadingMessages, setIsLoadingMessages] = useState(true);
 
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Get settings for the selected model
-  const currentSettings = aiSettingsByModel[selectedModel.name] || aiSettingsByModel['Task 1'];
+  const currentTask = tasks.find(t => t.name === selectedModel.name);
+  const currentSettings = currentTask?.settings || tasks[0]?.settings || {
+    personality: 'friendly',
+    responseSpeed: 1.0,
+    creativity: 0.7,
+    helpfulness: 0.9,
+    verbosity: 0.6,
+    temperature: 0.7,
+    maxTokens: 1000,
+    systemPrompt: 'You are a helpful AI assistant.',
+    taskPrompt: ''
+  };
+
+  // Load messages from backend or localStorage on mount
+  useEffect(() => {
+    const loadMessages = async () => {
+      console.log('📡 Loading conversation on open...');
+      
+      try {
+        // First, try loading from backend (use unique device ID based on fingerprint)
+        const userId = await getDeviceId(); // Unique per device/browser - consistent across sessions
+        console.log('🔍 Attempting to fetch conversations from backend for device:', userId);
+        
+        const conversations = await conversationsAPI.getAll(userId);
+        
+        if (conversations && conversations.length > 0) {
+          // Load the most recent conversation
+          const latestConversation = conversations[0];
+          console.log('✅ Loaded latest conversation from backend:', latestConversation.title);
+          console.log(`   - Messages: ${latestConversation.messages.length}`);
+          console.log(`   - Last updated: ${latestConversation.lastMessageAt}`);
+          
+          setMessages(latestConversation.messages);
+          setIsLoadingMessages(false);
+          return;
+        } else {
+          console.log('ℹ️ No conversations in backend, checking localStorage...');
+        }
+      } catch (error) {
+        console.error('⚠️ Backend error, falling back to localStorage:', error);
+      }
+      
+      // If backend fails or has no data, try localStorage
+      const savedChat = localStorage.getItem('currentChat');
+      if (savedChat) {
+        try {
+          const parsed = JSON.parse(savedChat);
+          // Convert date strings back to Date objects
+          const messagesWithDates = parsed.messages.map((msg: any) => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp)
+          }));
+          setMessages(messagesWithDates);
+          console.log('✅ Loaded chat from localStorage');
+          setIsLoadingMessages(false);
+          return;
+        } catch (error) {
+          console.error('Error parsing saved chat:', error);
+        }
+      }
+      
+      // Final fallback: use default greeting
+      console.log('ℹ️ No saved conversations, using default greeting');
+      setMessages([
+        {
+          id: '1',
+          text: selectedModel.greeting,
+          sender: 'ai' as const,
+          timestamp: new Date()
+        }
+      ]);
+      setIsLoadingMessages(false);
+    };
+    
+    loadMessages();
+  }, [selectedModel.greeting]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -180,7 +218,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ aiSettingsByModel, onSaveConversation
     // Convert settings to backend format
     const settings = {
       personality: currentSettings.personality,
-      responseSpeed: 'medium',
+      responseSpeed: currentSettings.responseSpeed,
       creativity: currentSettings.creativity,
       helpfulness: currentSettings.helpfulness,
       verbosity: currentSettings.verbosity,
@@ -261,14 +299,14 @@ const ChatBox: React.FC<ChatBoxProps> = ({ aiSettingsByModel, onSaveConversation
         </div>
       </div>
       
-      {currentSettings.taskPrompt && currentSettings.taskPrompt.trim() !== '' && (
-        <div className="task-prompt-banner">
-          <div className="task-prompt-label">📝 Task:</div>
-          <div className="task-prompt-text">{currentSettings.taskPrompt}</div>
-        </div>
-      )}
       
       <div className="chat-messages">
+        {isLoadingMessages ? (
+          <div style={{ padding: '40px', textAlign: 'center', color: '#999' }}>
+            <p>Loading conversation...</p>
+          </div>
+        ) : (
+          <>
         {messages.map((message) => (
           <div key={message.id} className={`message ${message.sender}`}>
             <div className="message-content">
@@ -296,6 +334,8 @@ const ChatBox: React.FC<ChatBoxProps> = ({ aiSettingsByModel, onSaveConversation
         )}
         
         <div ref={messagesEndRef} />
+          </>
+        )}
       </div>
       
       <div className="chat-input">

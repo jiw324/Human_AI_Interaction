@@ -10,10 +10,12 @@ export interface Message {
 }
 
 export interface AIModel {
-  id: string;
+  id?: string;
   name: string;
   greeting: string;
-  description: string;
+  description?: string;
+  personality?: 'friendly' | 'professional' | 'casual' | 'enthusiastic';
+  icon?: string;
 }
 
 export interface AISettings {

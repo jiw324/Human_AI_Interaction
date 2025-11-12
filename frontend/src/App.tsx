@@ -4,7 +4,8 @@ import ChatBox from './components/ChatBox'
 import ResearchPanel from './components/ResearchPanel'
 import ConversationHistory from './components/ConversationHistory'
 import LoginPage from './components/LoginPage'
-import { authService, healthAPI, tasksAPI, type Task } from './services/api'
+import { authService, healthAPI, tasksAPI, conversationsAPI, type Task, type Conversation, type Message, type AIModel } from './services/api'
+import { getDeviceId } from './utils/deviceId'
 import './App.css'
 
 interface AISettings {
@@ -17,29 +18,6 @@ interface AISettings {
   maxTokens: number;
   systemPrompt: string;
   taskPrompt: string;
-}
-
-interface Message {
-  id: string;
-  text: string;
-  sender: 'user' | 'ai';
-  timestamp: Date;
-}
-
-interface AIModel {
-  name: string;
-  greeting: string;
-  personality: string;
-  icon: string;
-}
-
-interface Conversation {
-  id: string;
-  title: string;
-  aiModel: AIModel;
-  messages: Message[];
-  createdAt: Date;
-  lastMessageAt: Date;
 }
 
 function App() {
@@ -104,8 +82,8 @@ function App() {
   // Load tasks from localStorage first, then sync with backend
   useEffect(() => {
     const loadTasks = async () => {
-      if (isLoggedIn && backendStatus === 'online') {
-        console.log('🔐 User logged in, loading tasks...');
+      if (backendStatus === 'online') {
+        console.log('📡 Loading tasks (no login required)...');
         setTasksLoading(true);
         
         // Try to load from localStorage first for instant UI
@@ -132,11 +110,11 @@ function App() {
         setTasksLoading(false);
         console.log('✨ Tasks state updated in App');
       } else {
-        console.log('⏸️ Not loading tasks:', { isLoggedIn, backendStatus });
+        console.log('⏸️ Backend offline, not loading tasks');
       }
     };
     loadTasks();
-  }, [isLoggedIn, backendStatus]);
+  }, [backendStatus]);
 
   // Save tasks to localStorage whenever they change
   useEffect(() => {
@@ -169,7 +147,7 @@ function App() {
     }
   }, []);
 
-  const handleSaveConversation = useCallback((conversation: Conversation) => {
+  const handleSaveConversation = useCallback(async (conversation: Conversation) => {
     setConversations(prev => {
       const existingIndex = prev.findIndex(conv => conv.id === conversation.id);
       let updated;
@@ -183,6 +161,15 @@ function App() {
       localStorage.setItem('conversations', JSON.stringify(updated));
       return updated;
     });
+
+    // Save to backend database (uses unique device ID)
+    try {
+      const userId = await getDeviceId(); // Unique per device/browser - consistent across sessions
+      await conversationsAPI.save(userId, conversation);
+      console.log('💾 Conversation saved to backend database for device:', userId);
+    } catch (error) {
+      console.error('❌ Error saving conversation to backend:', error);
+    }
   }, []);
 
   const navigate = useNavigate();
@@ -278,10 +265,16 @@ function App() {
             path="/" 
             element={
               <div className="chat-section">
-                <ChatBox 
-                  aiSettingsByModel={aiSettingsByModel}
-                  onSaveConversation={handleSaveConversation}
-                />
+                {tasksLoading ? (
+                  <div style={{ padding: '40px', textAlign: 'center' }}>
+                    <p>Loading tasks...</p>
+                  </div>
+                ) : (
+                  <ChatBox 
+                    tasks={tasks}
+                    onSaveConversation={handleSaveConversation}
+                  />
+                )}
               </div>
             } 
           />
