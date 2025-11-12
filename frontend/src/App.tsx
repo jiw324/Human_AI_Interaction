@@ -290,6 +290,7 @@ function App() {
           <NavLink 
             to="/login"
             className={({ isActive }) => `nav-btn ${isActive ? 'active' : ''}`}
+            style={{ display: 'none' }}
           >
             Research Login
           </NavLink>
