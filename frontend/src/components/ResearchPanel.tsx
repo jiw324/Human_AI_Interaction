@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { tasksAPI, type Task } from '../services/api';
+import LiteLLMConfigComponent from './LiteLLMConfig';
 import './ResearchPanel.css';
 import './ResearchPanel_additions.css';
 
@@ -67,12 +68,12 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
   // System Config State (just for UI, actual values come from currentSettings)
   const [showLlamaKey, setShowLlamaKey] = useState<boolean>(false);
   const [availableModels] = useState<string[]>([
-    'Mistral 7B Instruct',
-    'Nova Pro',
-    'Meta llama3.3b',
-    'Amazon Titan Express',
-    'GPT-4',
-    'Claude-3.5-Sonnet'
+    'gpt-3.5-turbo',
+    'gpt-4',
+    'gpt-4o',
+    'gpt-4o-mini',
+    'claude-3-5-sonnet-20241022',
+    'claude-3-opus-20240229'
   ]);
   const [configTab, setConfigTab] = useState<'clear' | 'reset' | 'update'>('update');
   const [models] = useState<ModelInfo[]>([
@@ -169,7 +170,7 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
     llamaApiKey: '',
     openaiApiKey: '',
     anthropicApiKey: '',
-    defaultModel: 'GPT-4',
+    defaultModel: 'gpt-3.5-turbo',
     autoUpdateRobotList: false
   };
   
@@ -315,7 +316,7 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
       llamaApiKey: '',
       openaiApiKey: '',
       anthropicApiKey: '',
-      defaultModel: 'GPT-4',
+      defaultModel: 'gpt-3.5-turbo',
       autoUpdateRobotList: false
     };
     
@@ -382,7 +383,7 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
       llamaApiKey: '',
       openaiApiKey: '',
       anthropicApiKey: '',
-      defaultModel: 'GPT-4',
+      defaultModel: 'gpt-3.5-turbo',
       autoUpdateRobotList: false
     };
     
@@ -555,6 +556,18 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
             </p>
           </div>
         )}
+
+        {/* LiteLLM Configuration (Always Visible) */}
+        <div className="config-section">
+          <LiteLLMConfigComponent 
+            onModelSelect={(modelId) => {
+              console.log('Selected model:', modelId);
+              if (activeTask) {
+                handleSettingChange('defaultModel', modelId);
+              }
+            }}
+          />
+        </div>
 
         {/* System Prompt and Task Prompt Side by Side */}
         {activeTask && (

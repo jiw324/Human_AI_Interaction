@@ -268,7 +268,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
       description: selectedModel.personality
     };
 
-    // Convert settings to backend format
+    // Convert settings to backend format (include LiteLLM parameters)
     const settings = {
       personality: currentSettings.personality,
       responseSpeed: currentSettings.responseSpeed,
@@ -278,15 +278,21 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
       temperature: currentSettings.temperature,
       maxTokens: currentSettings.maxTokens,
       systemPrompt: currentSettings.systemPrompt,
-      taskPrompt: currentSettings.taskPrompt || ''
+      taskPrompt: currentSettings.taskPrompt || '',
+      // LiteLLM-specific parameters
+      modelId: currentTask?.settings.defaultModel || 'gpt-3.5-turbo',
+      topP: 1.0,
+      presencePenalty: 0.0,
+      frequencyPenalty: 0.0,
     };
 
-    // Call backend API
+    // Call backend API with message history for context
     const result = await chatAPI.sendMessage(
       userMessage,
       conversationId,
       aiModel,
-      settings
+      settings,
+      messages // Send full message history
     );
 
     if (result.success && result.response) {

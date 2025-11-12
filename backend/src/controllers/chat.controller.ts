@@ -2,55 +2,82 @@ import { Request, Response, NextFunction } from 'express';
 import { ChatRequest, ChatResponse, Message } from '../types';
 import { AppError } from '../middleware/error.middleware';
 import { v4 as uuidv4 } from 'uuid';
+import { liteLLMService } from '../services/litellm.service';
+import { LiteLLMMessage } from '../types/litellm.types';
 
-// Simulated AI response generator
+// Generate AI response using LiteLLM service
 const generateAIResponse = async (
   userMessage: string,
-  _aiModel: any,
-  settings?: any
+  aiModel: any,
+  settings?: any,
+  messageHistory?: Message[]
 ): Promise<string> => {
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1500));
-
-  // Generate contextual response based on personality
-  const responses = {
-    analytical: [
-      `Let me analyze that systematically. ${userMessage.includes('?') ? 'Based on the available data...' : 'From an analytical perspective...'}`,
-      `Breaking this down into components: ${userMessage.toLowerCase().includes('how') ? 'The process involves...' : 'The key factors are...'}`,
-      `Looking at this objectively, ${userMessage.toLowerCase().includes('what') ? 'the fundamental concept is...' : 'we can observe that...'}`
-    ],
-    creative: [
-      `What an interesting thought! ${userMessage.includes('?') ? "Let's explore this creatively..." : "I'm imagining..."}`,
-      `That sparks an idea! ${userMessage.toLowerCase().includes('how') ? "Here's an innovative approach..." : "Let me paint you a picture..."}`,
-      `Fascinating! ${userMessage.toLowerCase().includes('what') ? "Think of it like..." : "Here's a fresh perspective..."}`
-    ],
-    expert: [
-      `As an expert in this domain, I can explain that ${userMessage.includes('?') ? 'the answer involves...' : 'this relates to...'}`,
-      `From my extensive experience, ${userMessage.toLowerCase().includes('how') ? 'the best practice is...' : 'the established principle is...'}`,
-      `Based on research and practical application, ${userMessage.toLowerCase().includes('what') ? 'the definition encompasses...' : 'we understand that...'}`
-    ],
-    friendly: [
-      `Hey! Great question! ${userMessage.includes('?') ? "I'd be happy to help with that!" : "Let me share my thoughts!"}`,
-      `Oh, I love talking about this! ${userMessage.toLowerCase().includes('how') ? "Here's how it works..." : "So basically..."}`,
-      `That's a really good point! ${userMessage.toLowerCase().includes('what') ? "To put it simply..." : "You know what I think?..."}`
-    ]
-  };
-
-  const personality = settings?.personality?.toLowerCase() || 'friendly';
-  const responseSet = responses[personality as keyof typeof responses] || responses.friendly;
-  const selectedResponse = responseSet[Math.floor(Math.random() * responseSet.length)];
-
-  // Add elaboration based on verbosity
-  const verbosity = settings?.verbosity || 50;
-  let elaboration = '';
-  
-  if (verbosity > 70) {
-    elaboration = ' Furthermore, it\'s worth noting that this connects to broader concepts and has several important implications. The nuances here are quite fascinating when you examine them closely.';
-  } else if (verbosity > 40) {
-    elaboration = ' This is particularly relevant because it connects to some key principles in the field.';
+  try {
+    console.log(`🤖 [Chat] Generating AI response using ${settings?.modelId || 'default model'}...`);
+    
+    // Build message history for LiteLLM in the correct format
+    const messages: LiteLLMMessage[] = [];
+    
+    // Add system prompt if available
+    if (settings?.systemPrompt) {
+      messages.push({
+        role: 'system',
+        content: settings.systemPrompt,
+      });
+    }
+    
+    // Add conversation history (last 10 messages for context)
+    if (messageHistory && messageHistory.length > 0) {
+      const recentHistory = messageHistory.slice(-10);
+      for (const msg of recentHistory) {
+        if (msg.sender === 'user') {
+          messages.push({
+            role: 'user',
+            content: msg.text,
+          });
+        } else if (msg.sender === 'ai') {
+          messages.push({
+            role: 'assistant',
+            content: msg.text,
+          });
+        }
+      }
+    }
+    
+    // Add current user message
+    messages.push({
+      role: 'user',
+      content: userMessage,
+    });
+    
+    console.log(`📝 [Chat] Message history: ${messages.length} messages`);
+    
+    // Call LiteLLM service
+    const response = await liteLLMService.sendChatCompletion(
+      messages,
+      settings?.modelId,
+      settings?.temperature,
+      settings?.maxTokens,
+      settings?.topP,
+      settings?.presencePenalty,
+      settings?.frequencyPenalty
+    );
+    
+    if (response.success && response.data?.choices?.[0]?.message?.content) {
+      const aiMessage = response.data.choices[0].message.content;
+      console.log(`✅ [Chat] AI response generated (${aiMessage.length} characters)`);
+      return aiMessage;
+    } else {
+      console.error(`❌ [Chat] LiteLLM failed: ${response.error}`);
+      throw new Error(response.error || 'Failed to generate AI response');
+    }
+  } catch (error) {
+    console.error('❌ [Chat] Error generating AI response:', error);
+    
+    // Fallback to a simple response
+    console.log('⚠️ [Chat] Using fallback response due to LiteLLM error');
+    return `I apologize, but I'm having trouble connecting to the AI service right now. Error: ${(error as Error).message}. Please check your LiteLLM configuration or try again later.`;
   }
-
-  return selectedResponse + elaboration;
 };
 
 export const sendMessage = async (
@@ -59,7 +86,7 @@ export const sendMessage = async (
   next: NextFunction
 ) => {
   try {
-    const { message, conversationId, aiModel, settings } = req.body;
+    const { message, conversationId, aiModel, settings, messageHistory } = req.body;
 
     if (!message || !message.trim()) {
       throw new AppError('Message is required', 400);
@@ -73,8 +100,10 @@ export const sendMessage = async (
       throw new AppError('AI Model is required', 400);
     }
 
-    // Generate AI response
-    const aiResponseText = await generateAIResponse(message, aiModel, settings);
+    console.log(`💬 [Chat] Processing message for conversation: ${conversationId}`);
+
+    // Generate AI response using LiteLLM
+    const aiResponseText = await generateAIResponse(message, aiModel, settings, messageHistory);
 
     // Create response message
     const responseMessage: Message = {
@@ -84,11 +113,14 @@ export const sendMessage = async (
       timestamp: new Date()
     };
 
+    console.log(`✅ [Chat] Response sent successfully`);
+
     res.json({
       success: true,
       response: responseMessage
     });
   } catch (error) {
+    console.error('❌ [Chat] Error in sendMessage:', error);
     next(error);
   }
 };
@@ -99,19 +131,21 @@ export const streamMessage = async (
   next: NextFunction
 ) => {
   try {
-    const { message, aiModel, settings } = req.body;
+    const { message, aiModel, settings, messageHistory } = req.body;
 
     if (!message || !message.trim()) {
       throw new AppError('Message is required', 400);
     }
+
+    console.log(`📡 [Chat] Streaming message...`);
 
     // Set up SSE (Server-Sent Events)
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
 
-    // Generate response
-    const aiResponseText = await generateAIResponse(message, aiModel, settings);
+    // Generate response using LiteLLM
+    const aiResponseText = await generateAIResponse(message, aiModel, settings, messageHistory);
 
     // Stream response word by word
     const words = aiResponseText.split(' ');
@@ -124,7 +158,10 @@ export const streamMessage = async (
     // Send completion signal
     res.write(`data: ${JSON.stringify({ chunk: '', done: true })}\n\n`);
     res.end();
+
+    console.log(`✅ [Chat] Streaming completed`);
   } catch (error) {
+    console.error('❌ [Chat] Error in streamMessage:', error);
     next(error);
   }
 };

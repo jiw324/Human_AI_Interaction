@@ -22,6 +22,10 @@ export interface AISettings {
   maxTokens: number;
   systemPrompt: string;
   taskPrompt: string;
+  modelId?: string;
+  topP?: number;
+  presencePenalty?: number;
+  frequencyPenalty?: number;
 }
 
 export interface Conversation {
@@ -48,6 +52,7 @@ export interface ChatRequest {
   conversationId: string;
   aiModel: AIModel;
   settings?: AISettings;
+  messageHistory?: Message[];
 }
 
 export interface ChatResponse {

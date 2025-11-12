@@ -137,7 +137,8 @@ export const chatAPI = {
     message: string,
     conversationId: string,
     aiModel: AIModel,
-    settings?: AISettings
+    settings?: AISettings,
+    messageHistory?: Message[]
   ): Promise<{ success: boolean; response?: Message; error?: string }> => {
     try {
       const response = await fetchAPI('/chat/message', {
@@ -146,7 +147,8 @@ export const chatAPI = {
           message,
           conversationId,
           aiModel,
-          settings
+          settings,
+          messageHistory
         })
       });
 

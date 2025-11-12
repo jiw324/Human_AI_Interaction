@@ -8,8 +8,10 @@ import chatRoutes from './routes/chat.routes';
 import settingsRoutes from './routes/settings.routes';
 import conversationRoutes from './routes/conversation.routes';
 import taskRoutes from './routes/task.routes';
+import litellmRoutes from './routes/litellm.routes';
 import { errorHandler } from './middleware/error.middleware';
 import db from './config/database';
+import { configService } from './services/config.service';
 
 // Load environment variables
 dotenv.config();
@@ -77,6 +79,7 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/tasks', taskRoutes);
+app.use('/api/litellm', litellmRoutes);
 
 // 404 handler
 app.use((req, res) => {
@@ -102,6 +105,18 @@ app.listen(PORT, async () => {
     console.warn('⚠️  Database connection failed. Server will run but database operations will fail.');
     console.warn('⚠️  Please check your database configuration in .env file');
   }
+  
+  // Initialize configuration service
+  if (dbConnected) {
+    console.log('\n⚙️  Initializing configuration service...');
+    try {
+      await configService.ensureBasicConfigExists();
+      console.log('✅ Configuration service initialized');
+    } catch (error) {
+      console.error('❌ Failed to initialize configuration service:', error);
+    }
+  }
+  
   console.log('');
 });
 
