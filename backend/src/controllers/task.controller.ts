@@ -396,19 +396,7 @@ export const deleteTask = async (req: Request, res: Response) => {
       });
     }
     
-    // Check if this is the last task
-    const taskCount = await db.queryOne(
-      `SELECT COUNT(*) as count FROM tasks 
-       WHERE user_id = ? AND is_active = TRUE`,
-      [userId]
-    );
-    
-    if (taskCount.count <= 1) {
-      return res.status(400).json({
-        success: false,
-        message: 'Cannot delete the last task. At least one task must remain.'
-      });
-    }
+    // Allow deleting all tasks (user can have 0 tasks)
     
     // Soft delete (set is_active to false)
     await db.query(

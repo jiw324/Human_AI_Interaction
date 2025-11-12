@@ -140,33 +140,8 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
     }
   ]);
   
-  // Safety check
-  if (!tasks || tasks.length === 0) {
-    return (
-      <div className="research-panel">
-        <div className="panel-header">
-          <h2>AI Research Panel</h2>
-        </div>
-        <div className="panel-content">
-          <p>No tasks available. Please check your connection.</p>
-        </div>
-      </div>
-    );
-  }
-  
-  const activeTask = tasks.find(t => t.id === activeTaskId);
-  if (!activeTask) {
-    return (
-      <div className="research-panel">
-        <div className="panel-header">
-          <h2>AI Research Panel</h2>
-        </div>
-        <div className="panel-content">
-          <p>Task not found.</p>
-        </div>
-      </div>
-    );
-  }
+  // Find active task (may be null if no tasks exist)
+  const activeTask = tasks.length > 0 ? tasks.find(t => t.id === activeTaskId) : null;
 
   const personalityOptions = [
     { value: 'friendly', label: 'Friendly & Warm' },
@@ -177,8 +152,27 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
     { value: 'expert', label: 'Expert & Authoritative' }
   ];
 
-  // Get current settings (from editing state or active task)
-  const currentSettings = editingSettings || activeTask.settings;
+  // Get current settings (from editing state or active task, or defaults if no task)
+  const defaultSettings: AISettings = {
+    personality: 'friendly',
+    responseSpeed: 1.0,
+    creativity: 0.7,
+    helpfulness: 0.9,
+    verbosity: 0.6,
+    temperature: 0.7,
+    maxTokens: 1000,
+    systemPrompt: 'You are a helpful AI assistant. Be friendly, informative, and engaging in your responses.',
+    taskPrompt: '',
+    llamaBaseUrl: 'https://llm-proxy.oai-at.org/',
+    llamaServiceUrl: '',
+    llamaApiKey: '',
+    openaiApiKey: '',
+    anthropicApiKey: '',
+    defaultModel: 'GPT-4',
+    autoUpdateRobotList: false
+  };
+  
+  const currentSettings = editingSettings || (activeTask?.settings) || defaultSettings;
 
   const handleSettingChange = (key: keyof AISettings, value: string | number | boolean) => {
     if (!activeTask) return;
@@ -189,7 +183,10 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
   };
 
   const handleUpdate = async () => {
-    if (!activeTask) return;
+    if (!activeTask) {
+      alert('⚠️ Please create a task first before updating settings.');
+      return;
+    }
     
     try {
       console.log('🔄 Updating task settings to backend...', {
@@ -223,7 +220,10 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
   };
 
   const resetToDefaults = async () => {
-    if (!activeTask) return;
+    if (!activeTask) {
+      alert('⚠️ Please create a task first before resetting settings.');
+      return;
+    }
     
     const defaultSettings: AISettings = {
       personality: 'friendly',
@@ -341,11 +341,6 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
   };
 
   const deleteTask = async (taskId: string) => {
-    if (tasks.length <= 1) {
-      alert('Cannot delete the last task');
-      return;
-    }
-    
     const taskToDelete = tasks.find(t => t.id === taskId);
     if (!taskToDelete) return;
     
@@ -363,7 +358,11 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
           console.log('💾 Task deletion saved to localStorage');
           
           if (activeTaskId === taskId) {
-            setActiveTaskId(newTasks[0].id);
+            if (newTasks.length > 0) {
+              setActiveTaskId(newTasks[0].id);
+            } else {
+              setActiveTaskId('');
+            }
           }
           alert('✅ Task deleted successfully!');
         } else {
@@ -414,6 +413,14 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
         <div className="config-section tasks-section">
           <h3 className="section-title">Tasks Management</h3>
           
+          {tasks.length === 0 && (
+            <div style={{ padding: '20px', textAlign: 'center', background: '#f0f0f0', borderRadius: '8px', marginBottom: '20px' }}>
+              <p style={{ margin: 0, color: '#666', fontSize: '16px' }}>
+                📝 No tasks yet. Create your first task to get started!
+              </p>
+            </div>
+          )}
+          
           <div className="tasks-add-container">
             <input
               type="text"
@@ -461,9 +468,19 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
         </div>
 
         {/* Current Task Configuration */}
-        <div className="current-task-header">
-          <h3>Configure Task: <span className="task-highlight">{activeTask.name}</span></h3>
-        </div>
+        {activeTask && (
+          <div className="current-task-header">
+            <h3>Configure Task: <span className="task-highlight">{activeTask.name}</span></h3>
+          </div>
+        )}
+        
+        {!activeTask && tasks.length === 0 && (
+          <div style={{ padding: '30px', textAlign: 'center', background: '#fff3cd', borderRadius: '8px', margin: '20px 0' }}>
+            <p style={{ margin: 0, color: '#856404', fontSize: '18px', fontWeight: 500 }}>
+              ⚠️ Create a task above to configure settings
+            </p>
+          </div>
+        )}
 
         {/* System Prompt and Task Prompt Side by Side */}
         <div className="prompts-container">
