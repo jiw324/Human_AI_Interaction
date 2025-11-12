@@ -47,27 +47,50 @@ export const getConversations = async (
       throw new AppError('User ID is required', 400);
     }
 
-    console.log('📡 [Backend] Fetching conversations from database for device:', userId);
+    console.log('📡 [Backend] Fetching conversations from database for:', userId);
     
     // Auto-create user record if device ID doesn't exist
     await ensureUserExists(userId);
 
-    // Fetch conversations from database
-    const dbConversations = await db.query(
-      `SELECT * FROM conversations 
-       WHERE user_id = ? 
-       ORDER BY last_message_at DESC`,
-      [userId]
-    );
+    // Check if this is an admin user (has research_key, not a device ID)
+    const isAdmin = userId === 'admin-001' || !userId.startsWith('device_');
+    
+    // Fetch conversations from database (metadata only, no messages)
+    // Admin sees ALL conversations, regular users see only their own
+    let dbConversations;
+    if (isAdmin) {
+      console.log('👑 [Backend] Admin user - fetching ALL conversations');
+      dbConversations = await db.query(
+        `SELECT * FROM conversations 
+         ORDER BY last_message_at DESC`
+      );
+    } else {
+      console.log('📱 [Backend] Device user - fetching device-specific conversations');
+      dbConversations = await db.query(
+        `SELECT * FROM conversations 
+         WHERE user_id = ? 
+         ORDER BY last_message_at DESC`,
+        [userId]
+      );
+    }
 
-    // Fetch messages for each conversation
+    // For each conversation, only fetch message count and last message preview
     const conversations = await Promise.all(
       dbConversations.map(async (conv: any) => {
-        const messages = await db.query(
+        // Get message count
+        const countResult = await db.queryOne(
+          `SELECT COUNT(*) as count FROM messages WHERE conversation_id = ?`,
+          [conv.id]
+        );
+        const messageCount = countResult?.count || 0;
+
+        // Get last message for preview (only the last one, not all messages)
+        const lastMessage = await db.queryOne(
           `SELECT id, text, sender, timestamp 
            FROM messages 
            WHERE conversation_id = ? 
-           ORDER BY timestamp ASC`,
+           ORDER BY timestamp DESC 
+           LIMIT 1`,
           [conv.id]
         );
 
@@ -80,12 +103,13 @@ export const getConversations = async (
             icon: conv.ai_model_icon,
             greeting: ''
           },
-          messages: messages.map((msg: any) => ({
-            id: msg.id,
-            text: msg.text,
-            sender: msg.sender,
-            timestamp: new Date(msg.timestamp)
-          })),
+          messages: lastMessage ? [{
+            id: lastMessage.id,
+            text: lastMessage.text,
+            sender: lastMessage.sender,
+            timestamp: new Date(lastMessage.timestamp)
+          }] : [],
+          messageCount: messageCount, // Add message count separately
           createdAt: new Date(conv.created_at),
           lastMessageAt: new Date(conv.last_message_at)
         };
@@ -93,6 +117,8 @@ export const getConversations = async (
     );
 
     console.log(`✅ [Backend] Found ${conversations.length} conversations`);
+    console.log(`📋 [Backend] Conversation IDs: ${conversations.map(c => c.id).join(', ')}`);
+    console.log(`📋 [Backend] Conversation Titles: ${conversations.map(c => c.title).join(', ')}`);
 
     res.json({
       success: true,
@@ -118,12 +144,27 @@ export const getConversation = async (
 
     console.log('🔍 [Backend] Fetching conversation from database:', conversationId);
 
+    // Check if this is an admin user
+    const isAdmin = userId === 'admin-001' || !userId.startsWith('device_');
+    
     // Fetch conversation
-    const conv = await db.queryOne(
-      `SELECT * FROM conversations 
-       WHERE id = ? AND user_id = ?`,
-      [conversationId, userId]
-    );
+    // Admin can fetch any conversation, regular users only their own
+    let conv;
+    if (isAdmin) {
+      console.log('👑 [Backend] Admin user - fetching conversation without user restriction');
+      conv = await db.queryOne(
+        `SELECT * FROM conversations 
+         WHERE id = ?`,
+        [conversationId]
+      );
+    } else {
+      console.log('📱 [Backend] Device user - fetching device-specific conversation');
+      conv = await db.queryOne(
+        `SELECT * FROM conversations 
+         WHERE id = ? AND user_id = ?`,
+        [conversationId, userId]
+      );
+    }
 
     if (!conv) {
       throw new AppError('Conversation not found', 404);
@@ -270,11 +311,25 @@ export const deleteConversation = async (
 
     console.log('🗑️ [Backend] Deleting conversation from database:', conversationId);
 
+    // Check if this is an admin user
+    const isAdmin = userId === 'admin-001' || !userId.startsWith('device_');
+    
     // Delete conversation (messages will cascade delete)
-    const result = await db.query(
-      'DELETE FROM conversations WHERE id = ? AND user_id = ?',
-      [conversationId, userId]
-    );
+    // Admin can delete any conversation, regular users only their own
+    let result;
+    if (isAdmin) {
+      console.log('👑 [Backend] Admin user - deleting conversation without user restriction');
+      result = await db.query(
+        'DELETE FROM conversations WHERE id = ?',
+        [conversationId]
+      );
+    } else {
+      console.log('📱 [Backend] Device user - deleting device-specific conversation');
+      result = await db.query(
+        'DELETE FROM conversations WHERE id = ? AND user_id = ?',
+        [conversationId, userId]
+      );
+    }
 
     if ((result as any).affectedRows === 0) {
       throw new AppError('Conversation not found', 404);

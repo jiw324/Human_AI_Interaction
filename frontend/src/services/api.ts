@@ -44,6 +44,7 @@ export interface Conversation {
   title: string;
   aiModel: AIModel;
   messages: Message[];
+  messageCount?: number; // Total message count (used in history display)
   createdAt: Date;
   lastMessageAt: Date;
 }
@@ -244,6 +245,30 @@ export const conversationsAPI = {
     } catch (error) {
       console.error('Get conversations error:', error);
       return [];
+    }
+  },
+
+  getOne: async (userId: string, conversationId: string): Promise<Conversation | null> => {
+    try {
+      const response = await fetchAPI(`/conversations/${userId}/${conversationId}`);
+      const data = await response.json();
+
+      if (data.success && data.conversation) {
+        // Convert date strings to Date objects
+        return {
+          ...data.conversation,
+          createdAt: new Date(data.conversation.createdAt),
+          lastMessageAt: new Date(data.conversation.lastMessageAt),
+          messages: data.conversation.messages.map((msg: any) => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp)
+          }))
+        };
+      }
+      return null;
+    } catch (error) {
+      console.error('Get conversation error:', error);
+      return null;
     }
   },
 

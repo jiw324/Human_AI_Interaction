@@ -117,18 +117,8 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
     };
   });
 
-  const [conversationId] = useState(() => {
-    const savedChat = localStorage.getItem('currentChat');
-    if (savedChat) {
-      try {
-        const parsed = JSON.parse(savedChat);
-        return parsed.id;
-      } catch (error) {
-        console.error('Error parsing saved chat:', error);
-      }
-    }
-    return Date.now().toString();
-  });
+  // Conversation ID - will be set when loading existing conversation or creating new one
+  const [conversationId, setConversationId] = useState<string>('');
 
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -164,40 +154,20 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
     const loadMessages = async () => {
       console.log('📡 Loading conversation on open...');
       
-      try {
-        // First, try loading from backend (use unique device ID based on fingerprint)
-        const userId = await getDeviceId(); // Unique per device/browser - consistent across sessions
-        console.log('🔍 Attempting to fetch conversations from backend for device:', userId);
-        
-        const conversations = await conversationsAPI.getAll(userId);
-        
-        if (conversations && conversations.length > 0) {
-          // Load the most recent conversation
-          const latestConversation = conversations[0];
-          console.log('✅ Loaded latest conversation from backend:', latestConversation.title);
-          console.log(`   - Messages: ${latestConversation.messages.length}`);
-          console.log(`   - Last updated: ${latestConversation.lastMessageAt}`);
-          
-          // Sort messages by timestamp (oldest first) to ensure correct order
-          const sortedMessages = [...latestConversation.messages].sort((a, b) => 
-            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-          );
-          
-          setMessages(sortedMessages);
-          setIsLoadingMessages(false);
-          return;
-        } else {
-          console.log('ℹ️ No conversations in backend, checking localStorage...');
-        }
-      } catch (error) {
-        console.error('⚠️ Backend error, falling back to localStorage:', error);
-      }
-      
-      // If backend fails or has no data, try localStorage
+      // First, try loading from localStorage (fastest)
       const savedChat = localStorage.getItem('currentChat');
       if (savedChat) {
         try {
           const parsed = JSON.parse(savedChat);
+          
+          // Set conversation ID if it exists
+          if (parsed.id) {
+            setConversationId(parsed.id);
+            console.log('✅ Loaded chat from localStorage');
+            console.log(`   - Conversation ID: ${parsed.id}`);
+            console.log(`   - Messages: ${parsed.messages.length}`);
+          }
+          
           // Convert date strings back to Date objects
           const messagesWithDates = parsed.messages.map((msg: any) => ({
             ...msg,
@@ -210,7 +180,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
           );
           
           setMessages(sortedMessages);
-          console.log('✅ Loaded chat from localStorage');
           setIsLoadingMessages(false);
           return;
         } catch (error) {
@@ -218,8 +187,44 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
         }
       }
       
-      // Final fallback: use default greeting
-      console.log('ℹ️ No saved conversations, using default greeting');
+      // If localStorage has no data, try backend
+      try {
+        const userId = await getDeviceId(); // Unique per device/browser - consistent across sessions
+        console.log('ℹ️ No localStorage data, checking backend for device:', userId);
+        
+        const conversations = await conversationsAPI.getAll(userId);
+        
+        if (conversations && conversations.length > 0) {
+          // Load the most recent conversation
+          const latestConversation = conversations[0];
+          console.log('✅ Loaded latest conversation from backend:', latestConversation.title);
+          console.log(`   - Conversation ID: ${latestConversation.id}`);
+          console.log(`   - Messages: ${latestConversation.messages.length}`);
+          console.log(`   - Last updated: ${latestConversation.lastMessageAt}`);
+          
+          // Set the conversation ID so new messages save to this conversation
+          setConversationId(latestConversation.id);
+          
+          // Sort messages by timestamp (oldest first) to ensure correct order
+          const sortedMessages = [...latestConversation.messages].sort((a, b) => 
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+          );
+          
+          setMessages(sortedMessages);
+          setIsLoadingMessages(false);
+          return;
+        } else {
+          console.log('ℹ️ No conversations found in backend');
+        }
+      } catch (error) {
+        console.error('⚠️ Backend error:', error);
+      }
+      
+      // Final fallback: create new conversation with new ID
+      const newConversationId = Date.now().toString();
+      setConversationId(newConversationId);
+      console.log('🆕 Starting new conversation with ID:', newConversationId);
+      
       setMessages([
         {
           id: '1',
@@ -232,7 +237,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
     };
     
     loadMessages();
-  }, [selectedModel.greeting]);
+  }, []); // Only load once on mount, not when greeting changes
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -244,31 +249,41 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
 
   // Save current chat to localStorage whenever messages change
   useEffect(() => {
-    const conversation = {
-      id: conversationId,
-      title: `Chat with ${selectedModel.name}`,
-      aiModel: selectedModel,
-      messages: messages,
-      createdAt: messages[0].timestamp,
-      lastMessageAt: messages[messages.length - 1].timestamp
-    };
-    localStorage.setItem('currentChat', JSON.stringify(conversation));
-  }, [messages, conversationId, selectedModel]);
-
-  // Save conversation to history whenever messages change
-  useEffect(() => {
-    if (messages.length > 1) { // Only save if there are actual messages beyond the greeting
-      const conversation: Conversation = {
+    if (conversationId) {
+      const conversation = {
         id: conversationId,
         title: `Chat with ${selectedModel.name}`,
         aiModel: selectedModel,
         messages: messages,
-        createdAt: new Date(messages[0].timestamp),
-        lastMessageAt: new Date(messages[messages.length - 1].timestamp)
+        createdAt: messages[0].timestamp,
+        lastMessageAt: messages[messages.length - 1].timestamp
       };
-      onSaveConversation(conversation);
+      localStorage.setItem('currentChat', JSON.stringify(conversation));
     }
-  }, [messages, conversationId, selectedModel, onSaveConversation]);
+  }, [messages, conversationId, selectedModel]);
+
+  // Save conversation to history whenever messages change (debounced)
+  useEffect(() => {
+    // Only save if there are actual messages beyond the greeting AND conversation ID is set
+    if (messages.length > 1 && conversationId) {
+      // Debounce saving to prevent excessive API calls
+      const timeoutId = setTimeout(() => {
+        const conversation: Conversation = {
+          id: conversationId,
+          title: `Chat with ${selectedModel.name}`,
+          aiModel: selectedModel,
+          messages: messages,
+          createdAt: new Date(messages[0].timestamp),
+          lastMessageAt: new Date(messages[messages.length - 1].timestamp)
+        };
+        console.log(`💾 Saving conversation ${conversationId} with ${messages.length} messages`);
+        onSaveConversation(conversation);
+      }, 1000); // Wait 1 second after last change before saving
+
+      // Cleanup timeout on unmount or when dependencies change
+      return () => clearTimeout(timeoutId);
+    }
+  }, [messages, conversationId, selectedModel.name]); // Removed onSaveConversation from dependencies
 
   const getAIResponse = async (userMessage: string): Promise<Message | null> => {
     // Convert AI model to backend format

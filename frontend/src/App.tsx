@@ -157,25 +157,35 @@ function App() {
   }, []);
 
   const handleSaveConversation = useCallback(async (conversation: Conversation) => {
+    // Only update state if conversation actually changed
     setConversations(prev => {
       const existingIndex = prev.findIndex(conv => conv.id === conversation.id);
-      let updated;
+      
+      // Check if conversation actually changed to prevent unnecessary re-renders
       if (existingIndex >= 0) {
-        updated = [...prev];
+        const existing = prev[existingIndex];
+        // Compare message counts and last message timestamp
+        if (existing.messages.length === conversation.messages.length &&
+            existing.lastMessageAt.getTime() === conversation.lastMessageAt.getTime()) {
+          return prev; // No change, return same reference
+        }
+        
+        const updated = [...prev];
         updated[existingIndex] = conversation;
+        localStorage.setItem('conversations', JSON.stringify(updated));
+        return updated;
       } else {
-        updated = [...prev, conversation];
+        const updated = [...prev, conversation];
+        localStorage.setItem('conversations', JSON.stringify(updated));
+        return updated;
       }
-      // Save to localStorage
-      localStorage.setItem('conversations', JSON.stringify(updated));
-      return updated;
     });
 
-    // Save to backend database (uses unique device ID)
+    // Save to backend database (uses unique device ID) - debounced by ChatBox
     try {
-      const userId = await getDeviceId(); // Unique per device/browser - consistent across sessions
+      const userId = await getDeviceId();
       await conversationsAPI.save(userId, conversation);
-      console.log('💾 Conversation saved to backend database for device:', userId);
+      // Removed console.log to reduce spam
     } catch (error) {
       console.error('❌ Error saving conversation to backend:', error);
     }
@@ -183,19 +193,41 @@ function App() {
 
   const navigate = useNavigate();
 
-  const handleLoadConversation = (conversation: Conversation) => {
-    navigate('/');
-    // TODO: Implement conversation loading logic
+  const handleDeleteConversation = async (conversationId: string) => {
+    try {
+      // Determine userId based on login status
+      const isLoggedIn = authService.isAuthenticated();
+      const userId = isLoggedIn ? 'admin-001' : await getDeviceId();
+      
+      // Delete from database
+      console.log('🗑️ Deleting conversation:', conversationId);
+      const success = await conversationsAPI.delete(userId, conversationId);
+      
+      if (success) {
+        console.log('✅ Conversation deleted from database');
+        // Remove from frontend state
+        setConversations(prev => {
+          const updated = prev.filter(conv => conv.id !== conversationId);
+          // Save to localStorage
+          localStorage.setItem('conversations', JSON.stringify(updated));
+          return updated;
+        });
+      } else {
+        console.error('❌ Failed to delete conversation from database');
+      }
+    } catch (error) {
+      console.error('❌ Error deleting conversation:', error);
+    }
   };
 
-  const handleDeleteConversation = (conversationId: string) => {
-    setConversations(prev => {
-      const updated = prev.filter(conv => conv.id !== conversationId);
-      // Save to localStorage
-      localStorage.setItem('conversations', JSON.stringify(updated));
-      return updated;
-    });
-  };
+  const handleConversationsLoaded = useCallback((loadedConversations: Conversation[]) => {
+    console.log(`🔄 [App.tsx] handleConversationsLoaded called with ${loadedConversations.length} conversations`);
+    console.log(`📋 [App.tsx] Conversation IDs:`, loadedConversations.map(c => c.id));
+    setConversations(loadedConversations);
+    // Also save to localStorage
+    localStorage.setItem('conversations', JSON.stringify(loadedConversations));
+    console.log(`✅ State updated with ${loadedConversations.length} conversations`);
+  }, []);
 
   const handleLogin = (researchKey: string) => {
     setIsLoggedIn(true);
@@ -322,8 +354,8 @@ function App() {
                 <div className="history-section">
                   <ConversationHistory
                     conversations={conversations}
-                    onLoadConversation={handleLoadConversation}
                     onDeleteConversation={handleDeleteConversation}
+                    onConversationsLoaded={handleConversationsLoaded}
                   />
                 </div>
               </ProtectedRoute>
