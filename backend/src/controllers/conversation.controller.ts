@@ -230,15 +230,13 @@ export const saveConversation = async (
       );
     }
 
-    // Delete old messages and insert new ones
-    await db.query('DELETE FROM messages WHERE conversation_id = ?', [conversation.id]);
-    
+    // Use REPLACE INTO to handle duplicates (deletes and inserts in one atomic operation)
     for (const message of conversation.messages) {
       // Convert JavaScript Date to MySQL format
       const timestamp = new Date(message.timestamp).toISOString().slice(0, 19).replace('T', ' ');
       
       await db.query(
-        `INSERT INTO messages (id, conversation_id, text, sender, timestamp) 
+        `REPLACE INTO messages (id, conversation_id, text, sender, timestamp) 
          VALUES (?, ?, ?, ?, ?)`,
         [message.id, conversation.id, message.text, message.sender, timestamp]
       );
