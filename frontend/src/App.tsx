@@ -130,16 +130,25 @@ function App() {
     if (savedConversations) {
       try {
         const parsed = JSON.parse(savedConversations);
-        // Convert date strings back to Date objects
-        const conversationsWithDates = parsed.map((conv: any) => ({
-          ...conv,
-          createdAt: new Date(conv.createdAt),
-          lastMessageAt: new Date(conv.lastMessageAt),
-          messages: conv.messages.map((msg: any) => ({
+        // Convert date strings back to Date objects and sort messages
+        const conversationsWithDates = parsed.map((conv: any) => {
+          const messages = conv.messages.map((msg: any) => ({
             ...msg,
             timestamp: new Date(msg.timestamp)
-          }))
-        }));
+          }));
+          
+          // Sort messages by timestamp (oldest first)
+          const sortedMessages = messages.sort((a: Message, b: Message) => 
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+          );
+          
+          return {
+            ...conv,
+            createdAt: new Date(conv.createdAt),
+            lastMessageAt: new Date(conv.lastMessageAt),
+            messages: sortedMessages
+          };
+        });
         setConversations(conversationsWithDates);
       } catch (error) {
         console.error('Error parsing saved conversations:', error);

@@ -178,7 +178,12 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
           console.log(`   - Messages: ${latestConversation.messages.length}`);
           console.log(`   - Last updated: ${latestConversation.lastMessageAt}`);
           
-          setMessages(latestConversation.messages);
+          // Sort messages by timestamp (oldest first) to ensure correct order
+          const sortedMessages = [...latestConversation.messages].sort((a, b) => 
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+          );
+          
+          setMessages(sortedMessages);
           setIsLoadingMessages(false);
           return;
         } else {
@@ -198,7 +203,13 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
             ...msg,
             timestamp: new Date(msg.timestamp)
           }));
-          setMessages(messagesWithDates);
+          
+          // Sort messages by timestamp (oldest first) to ensure correct order
+          const sortedMessages = messagesWithDates.sort((a: Message, b: Message) => 
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+          );
+          
+          setMessages(sortedMessages);
           console.log('✅ Loaded chat from localStorage');
           setIsLoadingMessages(false);
           return;
