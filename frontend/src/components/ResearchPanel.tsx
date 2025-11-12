@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { tasksAPI, type Task } from '../services/api';
 import './ResearchPanel.css';
+import './ResearchPanel_additions.css';
 
 interface AISettings {
   // AI Model Settings
@@ -219,6 +220,43 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
     }
   };
 
+  const handleUpdateSystemPrompt = async () => {
+    if (!activeTask) {
+      alert('⚠️ Please create a task first before updating the system prompt.');
+      return;
+    }
+    
+    try {
+      console.log('🔄 Updating system prompt to backend...', {
+        taskId: activeTask.id,
+        taskName: activeTask.name,
+        systemPrompt: currentSettings.systemPrompt
+      });
+      
+      const updatedTask = await tasksAPI.update(activeTask.id, undefined, currentSettings);
+      
+      if (updatedTask) {
+        // Update local state and localStorage
+        const updatedTasks = tasks.map(t =>
+          t.id === activeTaskId ? updatedTask : t
+        );
+        onTasksChange(updatedTasks);
+        
+        // Clear editing state after successful save
+        setEditingSettings(null);
+        
+        // Explicitly save to localStorage
+        localStorage.setItem('research_tasks', JSON.stringify(updatedTasks));
+        console.log('💾 System prompt updated in localStorage');
+        
+        alert('✅ System Prompt updated successfully!');
+      }
+    } catch (error) {
+      console.error('❌ Failed to update system prompt:', error);
+      alert('Failed to update system prompt. Please try again.');
+    }
+  };
+
   const handleUpdateTaskPrompt = async () => {
     if (!activeTask) {
       alert('⚠️ Please create a task first before updating the task prompt.');
@@ -338,7 +376,7 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
       temperature: 0.7,
       maxTokens: 1000,
       systemPrompt: 'You are a helpful AI assistant. Be friendly, informative, and engaging in your responses.',
-      taskPrompt: '',
+      taskPrompt: 'Please provide specific instructions or context for this task. This prompt will guide the AI in understanding your specific requirements and objectives.',
       llamaBaseUrl: 'https://llm-proxy.oai-at.org/',
       llamaServiceUrl: '',
       llamaApiKey: '',
@@ -447,21 +485,21 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
       </div>
 
       <div className="panel-content">
-        {/* TASK CONFIGURATION (merged with System Configuration) */}
-        <>
-        {/* Tasks Management Section */}
-        <div className="config-section tasks-section">
-          <h3 className="section-title">Tasks Management</h3>
-          
-          {tasks.length === 0 && (
-            <div style={{ padding: '20px', textAlign: 'center', background: '#f0f0f0', borderRadius: '8px', marginBottom: '20px' }}>
-              <p style={{ margin: 0, color: '#666', fontSize: '16px' }}>
-                📝 No tasks yet. Create your first task to get started!
-              </p>
-            </div>
-          )}
-          
-          <div className="tasks-add-container">
+        <div className="panel-layout">
+          {/* LEFT PANEL - Tasks List */}
+          <div className="left-panel">
+            <div className="config-section tasks-section">
+              <h3 className="section-title">Tasks</h3>
+              
+              {tasks.length === 0 && (
+                <div style={{ padding: '20px', textAlign: 'center', background: '#f0f0f0', borderRadius: '8px', marginBottom: '20px' }}>
+                  <p style={{ margin: 0, color: '#666', fontSize: '14px' }}>
+                    📝 No tasks yet. Create your first task!
+                  </p>
+                </div>
+              )}
+              
+              <div className="tasks-add-container">
             <input
               type="text"
               value={newTaskName}
@@ -492,7 +530,6 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
                   onClick={() => setActiveTaskId(task.id)}
                 >
                   <span className="task-name">{task.name}</span>
-                  {activeTaskId === task.id && <span className="active-badge">Active</span>}
                 </button>
                 <button
                   type="button"
@@ -505,14 +542,11 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
               </div>
             ))}
           </div>
-        </div>
-
-        {/* Current Task Configuration */}
-        {activeTask && (
-          <div className="current-task-header">
-            <h3>Configure Task: <span className="task-highlight">{activeTask.name}</span></h3>
+            </div>
           </div>
-        )}
+          
+          {/* RIGHT PANEL - Task Configuration */}
+          <div className="right-panel">
         
         {!activeTask && tasks.length === 0 && (
           <div style={{ padding: '30px', textAlign: 'center', background: '#fff3cd', borderRadius: '8px', margin: '20px 0' }}>
@@ -536,6 +570,13 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
                 placeholder="Enter the system prompt that defines the AI's behavior..."
               />
             </div>
+            <button
+              type="button"
+              className="btn-update-prompt"
+              onClick={handleUpdateSystemPrompt}
+            >
+              💾 Update System Prompt
+            </button>
           </div>
 
           <div className="config-section prompt-section">
@@ -898,9 +939,16 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
             🔄 Reset to Defaults
           </button>
         </div>
-        </>
-        )}
-        </>
+            </>
+            )}
+            
+            {!activeTask && tasks.length === 0 && (
+              <div className="no-task-message">
+                <p>👈 Create a task to get started</p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

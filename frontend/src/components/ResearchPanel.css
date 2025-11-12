@@ -36,15 +36,50 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 30px;
+  padding: 20px 30px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
 }
 
 .panel-header h2 {
   margin: 0;
-  font-size: 2rem;
+  font-size: 1.75rem;
   font-weight: 700;
+}
+
+.panel-content {
+  padding: 0;
+}
+
+.panel-layout {
+  display: flex;
+  min-height: calc(100vh - 100px);
+}
+
+.left-panel {
+  width: 320px;
+  min-width: 320px;
+  background: #f8f9fa;
+  border-right: 2px solid #e0e0e0;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.right-panel {
+  flex: 1;
+  padding: 30px;
+  overflow-y: auto;
+  background: white;
+}
+
+.no-task-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #999;
+  font-size: 18px;
+  text-align: center;
 }
 
 /* Configuration Divider */
@@ -195,15 +230,9 @@
 
 .task-name {
   font-weight: 600;
-}
-
-.active-badge {
-  padding: 4px 12px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .task-delete-btn {

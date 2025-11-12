@@ -1,0 +1,64 @@
+/* Additional styles for left-right panel layout */
+
+.left-panel .section-title {
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+}
+
+.left-panel .tasks-add-container {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  margin-bottom: 15px;
+  align-items: center;
+}
+
+.left-panel .task-input {
+  flex: 1;
+  padding: 8px 10px;
+  font-size: 13px;
+  line-height: 1.2;
+  min-width: 0;
+}
+
+.left-panel .add-task-btn {
+  padding: 8px 12px;
+  font-size: 13px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.left-panel .tasks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.left-panel .task-item {
+  padding: 8px 10px;
+}
+
+.left-panel .task-select-btn {
+  font-size: 13px;
+}
+
+.left-panel .task-delete-btn {
+  padding: 2px 6px;
+  background: transparent;
+  border: none;
+  font-size: 14px;
+}
+
+.left-panel .task-delete-btn:hover {
+  background: #fee;
+  border-radius: 4px;
+}
+
+.right-panel .section-title {
+  font-size: 1.2rem;
+}
+
+.right-panel .config-section {
+  margin-bottom: 25px;
+}
+

@@ -18,6 +18,7 @@ interface AISettings {
   temperature: number;
   maxTokens: number;
   systemPrompt: string;
+  taskPrompt: string;
 }
 
 interface AIModel {
@@ -186,7 +187,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ aiSettingsByModel, onSaveConversation
       temperature: currentSettings.temperature,
       maxTokens: currentSettings.maxTokens,
       systemPrompt: currentSettings.systemPrompt,
-      taskPrompt: ''
+      taskPrompt: currentSettings.taskPrompt || ''
     };
 
     // Call backend API
@@ -259,6 +260,13 @@ const ChatBox: React.FC<ChatBoxProps> = ({ aiSettingsByModel, onSaveConversation
           <span className="status">Online • {selectedModel.personality}</span>
         </div>
       </div>
+      
+      {currentSettings.taskPrompt && currentSettings.taskPrompt.trim() !== '' && (
+        <div className="task-prompt-banner">
+          <div className="task-prompt-label">📝 Task:</div>
+          <div className="task-prompt-text">{currentSettings.taskPrompt}</div>
+        </div>
+      )}
       
       <div className="chat-messages">
         {messages.map((message) => (

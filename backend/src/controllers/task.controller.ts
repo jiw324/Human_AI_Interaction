@@ -45,7 +45,7 @@ export const getAllTasks = async (req: Request, res: Response) => {
     // Query database for user's tasks
     const tasks = await db.query(
       `SELECT * FROM tasks 
-       WHERE user_id = ? AND is_active = TRUE 
+       WHERE user_id = ? 
        ORDER BY created_at ASC`,
       [userId]
     );
@@ -85,7 +85,7 @@ export const getTaskById = async (req: Request, res: Response) => {
     
     const task = await db.queryOne(
       `SELECT * FROM tasks 
-       WHERE id = ? AND user_id = ? AND is_active = TRUE`,
+       WHERE id = ? AND user_id = ?`,
       [id, userId]
     );
     
@@ -171,7 +171,7 @@ export const createTask = async (req: Request, res: Response) => {
         settings.temperature || 0.7,
         settings.maxTokens || 1000,
         settings.systemPrompt || 'You are a helpful AI assistant.',
-        settings.taskPrompt || '',
+        settings.taskPrompt || 'Please provide specific instructions or context for this task. This prompt will guide the AI in understanding your specific requirements and objectives.',
         settings.llamaBaseUrl || 'https://llm-proxy.oai-at.org/',
         settings.llamaServiceUrl || '',
         settings.llamaApiKey || '',
@@ -234,7 +234,7 @@ export const updateTask = async (req: Request, res: Response) => {
     // Check if task exists and belongs to user
     const existingTask = await db.queryOne(
       `SELECT * FROM tasks 
-       WHERE id = ? AND user_id = ? AND is_active = TRUE`,
+       WHERE id = ? AND user_id = ?`,
       [id, userId]
     );
     
@@ -249,7 +249,7 @@ export const updateTask = async (req: Request, res: Response) => {
     if (name && name !== existingTask.name) {
       const duplicate = await db.queryOne(
         `SELECT id FROM tasks 
-         WHERE user_id = ? AND name = ? AND id != ? AND is_active = TRUE`,
+         WHERE user_id = ? AND name = ? AND id != ?`,
         [userId, name, id]
       );
       
@@ -395,7 +395,7 @@ export const deleteTask = async (req: Request, res: Response) => {
     // Check if task exists and belongs to user
     const task = await db.queryOne(
       `SELECT * FROM tasks 
-       WHERE id = ? AND user_id = ? AND is_active = TRUE`,
+       WHERE id = ? AND user_id = ?`,
       [id, userId]
     );
     
