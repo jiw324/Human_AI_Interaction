@@ -43,7 +43,7 @@ CREATE TABLE tasks (
     temperature DECIMAL(3,2) DEFAULT 0.7,
     max_tokens INT DEFAULT 1000,
     system_prompt TEXT NOT NULL,
-    task_prompt TEXT,
+    task_prompt TEXT DEFAULT 'Please provide specific instructions or context for this task. This prompt will guide the AI in understanding your specific requirements and objectives.',
     
     -- System Configuration Settings (Task-specific)
     llama_base_url VARCHAR(500) DEFAULT 'https://llm-proxy.oai-at.org/',

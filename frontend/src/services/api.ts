@@ -344,11 +344,15 @@ export const tasksAPI = {
         console.log('✅ Task created successfully:', data.data);
         return data.data;
       }
-      console.warn('⚠️ Failed to create task');
-      return null;
-    } catch (error) {
+      
+      // Throw error with backend message
+      const errorMessage = data.message || 'Failed to create task';
+      console.warn('⚠️ Failed to create task:', errorMessage);
+      throw new Error(errorMessage);
+    } catch (error: any) {
       console.error('❌ Create task error:', error);
-      return null;
+      // Re-throw to let caller handle it
+      throw new Error(error.message || 'Failed to create task');
     }
   },
 

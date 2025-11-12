@@ -136,14 +136,15 @@ export const createTask = async (req: Request, res: Response) => {
     // Check if task name already exists for this user
     const existingTask = await db.queryOne(
       `SELECT id FROM tasks 
-       WHERE user_id = ? AND name = ? AND is_active = TRUE`,
+       WHERE user_id = ? AND name = ?`,
       [userId, name]
     );
     
     if (existingTask) {
+      console.log('⚠️ [Backend] Task name already exists:', name);
       return res.status(409).json({
         success: false,
-        message: 'Task with this name already exists'
+        message: `A task named "${name}" already exists. Please choose a different name.`
       });
     }
     
@@ -202,6 +203,15 @@ export const createTask = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('❌ [Backend] Error creating task:', error);
+    
+    // Handle duplicate entry error
+    if ((error as any).code === 'ER_DUP_ENTRY') {
+      return res.status(409).json({
+        success: false,
+        message: 'A task with this name already exists. Please choose a different name.'
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Failed to create task',
@@ -398,13 +408,13 @@ export const deleteTask = async (req: Request, res: Response) => {
     
     // Allow deleting all tasks (user can have 0 tasks)
     
-    // Soft delete (set is_active to false)
+    // Hard delete (permanently remove from database)
     await db.query(
-      `UPDATE tasks SET is_active = FALSE WHERE id = ?`,
+      `DELETE FROM tasks WHERE id = ?`,
       [id]
     );
     
-    console.log('✅ [Backend] Task deleted successfully:', task.name);
+    console.log('✅ [Backend] Task permanently deleted from database:', task.name);
     
     res.status(200).json({
       success: true,

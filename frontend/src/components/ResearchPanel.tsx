@@ -162,7 +162,7 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
     temperature: 0.7,
     maxTokens: 1000,
     systemPrompt: 'You are a helpful AI assistant. Be friendly, informative, and engaging in your responses.',
-    taskPrompt: '',
+    taskPrompt: 'Please provide specific instructions or context for this task. This prompt will guide the AI in understanding your specific requirements and objectives.',
     llamaBaseUrl: 'https://llm-proxy.oai-at.org/',
     llamaServiceUrl: '',
     llamaApiKey: '',
@@ -219,6 +219,43 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
     }
   };
 
+  const handleUpdateTaskPrompt = async () => {
+    if (!activeTask) {
+      alert('⚠️ Please create a task first before updating the task prompt.');
+      return;
+    }
+    
+    try {
+      console.log('🔄 Updating task prompt to backend...', {
+        taskId: activeTask.id,
+        taskName: activeTask.name,
+        taskPrompt: currentSettings.taskPrompt
+      });
+      
+      const updatedTask = await tasksAPI.update(activeTask.id, undefined, currentSettings);
+      
+      if (updatedTask) {
+        // Update local state and localStorage
+        const updatedTasks = tasks.map(t =>
+          t.id === activeTaskId ? updatedTask : t
+        );
+        onTasksChange(updatedTasks);
+        
+        // Clear editing state after successful save
+        setEditingSettings(null);
+        
+        // Explicitly save to localStorage
+        localStorage.setItem('research_tasks', JSON.stringify(updatedTasks));
+        console.log('💾 Task prompt updated in localStorage');
+        
+        alert('✅ Task Prompt updated successfully!');
+      }
+    } catch (error) {
+      console.error('❌ Failed to update task prompt:', error);
+      alert('Failed to update task prompt. Please try again.');
+    }
+  };
+
   const resetToDefaults = async () => {
     if (!activeTask) {
       alert('⚠️ Please create a task first before resetting settings.');
@@ -234,7 +271,7 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
       temperature: 0.7,
       maxTokens: 1000,
       systemPrompt: 'You are a helpful AI assistant. Be friendly, informative, and engaging in your responses.',
-      taskPrompt: '',
+      taskPrompt: 'Please provide specific instructions or context for this task. This prompt will guide the AI in understanding your specific requirements and objectives.',
       llamaBaseUrl: 'https://llm-proxy.oai-at.org/',
       llamaServiceUrl: '',
       llamaApiKey: '',
@@ -329,9 +366,12 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
       } else {
         alert('Failed to create task. Please try again.');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error creating task:', error);
-      alert('Failed to create task. Please try again.');
+      
+      // Show specific error message from backend
+      const errorMessage = error.message || 'Failed to create task. Please try again.';
+      alert(`⚠️ ${errorMessage}`);
     } finally {
       // Reset flag after operation completes
       setTimeout(() => {
@@ -483,12 +523,13 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
         )}
 
         {/* System Prompt and Task Prompt Side by Side */}
-        <div className="prompts-container">
+        {activeTask && (
+          <div className="prompts-container">
           <div className="config-section prompt-section">
             <h3 className="section-title">System Prompt</h3>
             <div className="setting-group full-width">
               <textarea
-                value={settings.systemPrompt}
+                value={currentSettings.systemPrompt}
                 onChange={(e) => handleSettingChange('systemPrompt', e.target.value)}
                 className="setting-textarea"
                 rows={6}
@@ -501,24 +542,33 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
             <h3 className="section-title">Task Prompt</h3>
             <div className="setting-group full-width">
               <textarea
-                value={settings.taskPrompt || ''}
+                value={currentSettings.taskPrompt || ''}
                 onChange={(e) => handleSettingChange('taskPrompt', e.target.value)}
                 className="setting-textarea"
                 rows={6}
                 placeholder="Enter the specific task prompt or instructions..."
               />
             </div>
+            <button
+              type="button"
+              className="btn-update-prompt"
+              onClick={handleUpdateTaskPrompt}
+            >
+              💾 Update Task Prompt
+            </button>
           </div>
         </div>
+        )}
 
         {/* AI Model Config Section */}
-        <div className="config-section">
+        {activeTask && (
+          <div className="config-section">
           <h3 className="section-title">AI Model Config</h3>
           <div className="settings-grid">
             <div className="setting-group">
               <label className="setting-label">Personality</label>
               <select
-                value={settings.personality}
+                value={currentSettings.personality}
                 onChange={(e) => handleSettingChange('personality', e.target.value)}
                 className="setting-select"
               >
@@ -531,86 +581,89 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
             </div>
 
             <div className="setting-group">
-              <label className="setting-label">Response Speed: {settings.responseSpeed}x</label>
+              <label className="setting-label">Response Speed: {currentSettings.responseSpeed}x</label>
               <input
                 type="range"
                 min="0.1"
                 max="3.0"
                 step="0.1"
-                value={settings.responseSpeed}
+                value={currentSettings.responseSpeed}
                 onChange={(e) => handleSettingChange('responseSpeed', parseFloat(e.target.value))}
                 className="setting-slider"
               />
             </div>
 
             <div className="setting-group">
-              <label className="setting-label">Creativity: {Math.round(settings.creativity * 100)}%</label>
+              <label className="setting-label">Creativity: {Math.round(currentSettings.creativity * 100)}%</label>
               <input
                 type="range"
                 min="0"
                 max="1"
                 step="0.1"
-                value={settings.creativity}
+                value={currentSettings.creativity}
                 onChange={(e) => handleSettingChange('creativity', parseFloat(e.target.value))}
                 className="setting-slider"
               />
             </div>
 
             <div className="setting-group">
-              <label className="setting-label">Helpfulness: {Math.round(settings.helpfulness * 100)}%</label>
+              <label className="setting-label">Helpfulness: {Math.round(currentSettings.helpfulness * 100)}%</label>
               <input
                 type="range"
                 min="0"
                 max="1"
                 step="0.1"
-                value={settings.helpfulness}
+                value={currentSettings.helpfulness}
                 onChange={(e) => handleSettingChange('helpfulness', parseFloat(e.target.value))}
                 className="setting-slider"
               />
             </div>
 
             <div className="setting-group">
-              <label className="setting-label">Verbosity: {Math.round(settings.verbosity * 100)}%</label>
+              <label className="setting-label">Verbosity: {Math.round(currentSettings.verbosity * 100)}%</label>
               <input
                 type="range"
                 min="0"
                 max="1"
                 step="0.1"
-                value={settings.verbosity}
+                value={currentSettings.verbosity}
                 onChange={(e) => handleSettingChange('verbosity', parseFloat(e.target.value))}
                 className="setting-slider"
               />
             </div>
 
             <div className="setting-group">
-              <label className="setting-label">Temperature: {settings.temperature}</label>
+              <label className="setting-label">Temperature: {currentSettings.temperature}</label>
               <input
                 type="range"
                 min="0"
                 max="2"
                 step="0.1"
-                value={settings.temperature}
+                value={currentSettings.temperature}
                 onChange={(e) => handleSettingChange('temperature', parseFloat(e.target.value))}
                 className="setting-slider"
               />
             </div>
 
             <div className="setting-group">
-              <label className="setting-label">Max Tokens: {settings.maxTokens}</label>
+              <label className="setting-label">Max Tokens: {currentSettings.maxTokens}</label>
               <input
                 type="range"
                 min="100"
                 max="4000"
                 step="100"
-                value={settings.maxTokens}
+                value={currentSettings.maxTokens}
                 onChange={(e) => handleSettingChange('maxTokens', parseInt(e.target.value))}
                 className="setting-slider"
               />
             </div>
           </div>
         </div>
+        )}
 
         {/* Divider */}
+        {activeTask && (
+          <>
         <div className="config-divider">
           <h2 className="divider-title">⚙️ System Configuration</h2>
         </div>
@@ -845,6 +898,8 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
             🔄 Reset to Defaults
           </button>
         </div>
+        </>
+        )}
         </>
       </div>
     </div>
