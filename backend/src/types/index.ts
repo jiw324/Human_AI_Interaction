@@ -10,6 +10,8 @@ export interface AIModel {
   name: string;
   greeting: string;
   description: string;
+  personality?: string;
+  icon?: string;
 }
 
 export interface AISettings {

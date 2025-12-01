@@ -5,7 +5,7 @@
 
 import { query } from '../config/database';
 import { ConfigRow, ConfigUpdateDTO, LiteLLMConfig } from '../types/config.types';
-import { ResultSetHeader, RowDataPacket } from 'mysql2';
+import { ResultSetHeader } from 'mysql2';
 
 class ConfigService {
   /**

@@ -24,6 +24,7 @@ export const liteLLMController = {
    */
   async getModels(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+      void req;
       console.log('📡 [LiteLLM] Fetching available models...');
       
       const response = await liteLLMService.getModelsList();
@@ -55,6 +56,7 @@ export const liteLLMController = {
    */
   async getConfig(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+      void req;
       console.log('🔧 [LiteLLM] Fetching configuration...');
       
       const config = await configService.getLiteLLMConfig();
@@ -117,6 +119,7 @@ export const liteLLMController = {
    */
   async testConnection(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+      void req;
       console.log('🔌 [LiteLLM] Testing connection...');
       
       const result = await liteLLMService.testConnection();

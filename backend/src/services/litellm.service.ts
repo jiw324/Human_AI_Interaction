@@ -12,7 +12,6 @@ import {
   LiteLLMChatResponse,
   ModelsListResponse,
   ChatCompletionResponse,
-  ModelInfo,
 } from '../types/litellm.types';
 
 class LiteLLMService {

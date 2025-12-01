@@ -19,11 +19,13 @@ import { LiteLLMMessage } from '../types/litellm.types';
  */
 const generateAIResponse = async (
   userMessage: string,
-  aiModel: any,
   settings?: any,
   messageHistory?: Message[]
 ): Promise<string> => {
   try {
+    // Mark as used to satisfy TypeScript when compile options are strict
+    // (left in signature for future extensibility)
+    // void aiModel;
     console.log(`🤖 [Chat] Generating AI response using ${settings?.modelId || 'default model'}...`);
     
     // Build message history for LiteLLM in the correct format
@@ -159,7 +161,7 @@ export const sendMessage = async (
     console.log(`💬 [Chat] Processing message for conversation: ${conversationId}`);
 
     // Generate AI response using LiteLLM
-    const aiResponseText = await generateAIResponse(message, aiModel, settings, messageHistory);
+    const aiResponseText = await generateAIResponse(message, settings, messageHistory);
 
     // Create response message
     const responseMessage: Message = {
@@ -188,6 +190,7 @@ export const streamMessage = async (
 ) => {
   try {
     const { message, aiModel, settings, messageHistory } = req.body;
+    void aiModel;
 
     if (!message || !message.trim()) {
       throw new AppError('Message is required', 400);
@@ -201,7 +204,7 @@ export const streamMessage = async (
     res.setHeader('Connection', 'keep-alive');
 
     // Generate response using LiteLLM
-    const aiResponseText = await generateAIResponse(message, aiModel, settings, messageHistory);
+    const aiResponseText = await generateAIResponse(message, settings, messageHistory);
 
     // Stream response word by word
     const words = aiResponseText.split(' ');

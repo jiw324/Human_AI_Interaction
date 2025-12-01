@@ -5,7 +5,6 @@ import {
   saveConversation,
   deleteConversation
 } from '../controllers/conversation.controller';
-import { authenticate } from '../middleware/auth.middleware';
 
 const router = Router();
 

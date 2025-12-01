@@ -56,7 +56,7 @@ app.use(express.json()); // Parse JSON bodies
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
 
 // Request logger middleware
-app.use((req, res, next) => {
+app.use((req, _res, next) => {
   console.log(`\n📨 [${new Date().toLocaleTimeString()}] ${req.method} ${req.url}`);
   console.log(`   Origin: ${req.headers.origin || 'no origin'}`);
   console.log(`   Auth: ${req.headers.authorization ? '✅ Token present' : '❌ No token'}`);

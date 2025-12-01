@@ -76,7 +76,7 @@ export const getAllTasks = async (req: Request, res: Response) => {
 /**
  * Get a single task by ID
  */
-export const getTaskById = async (req: Request, res: Response) => {
+export const getTaskById = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const userId = (req as any).user?.id || 'admin-001';
@@ -91,10 +91,11 @@ export const getTaskById = async (req: Request, res: Response) => {
     
     if (!task) {
       console.log('⚠️ [Backend] Task not found');
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         message: 'Task not found'
       });
+      return;
     }
     
     const transformedTask = transformTaskFromDB(task);
@@ -118,17 +119,18 @@ export const getTaskById = async (req: Request, res: Response) => {
 /**
  * Create a new task
  */
-export const createTask = async (req: Request, res: Response) => {
+export const createTask = async (req: Request, res: Response): Promise<void> => {
   try {
     const { name, settings } = req.body;
     const userId = (req as any).user?.id || 'admin-001';
     
     // Validation
     if (!name || !settings) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         message: 'Task name and settings are required'
       });
+      return;
     }
     
     console.log('➕ [Backend] Creating new task:', name);
@@ -142,10 +144,11 @@ export const createTask = async (req: Request, res: Response) => {
     
     if (existingTask) {
       console.log('⚠️ [Backend] Task name already exists:', name);
-      return res.status(409).json({
+      res.status(409).json({
         success: false,
         message: `A task named "${name}" already exists. Please choose a different name.`
       });
+      return;
     }
     
     const taskId = uuidv4();
@@ -206,10 +209,11 @@ export const createTask = async (req: Request, res: Response) => {
     
     // Handle duplicate entry error
     if ((error as any).code === 'ER_DUP_ENTRY') {
-      return res.status(409).json({
+      res.status(409).json({
         success: false,
         message: 'A task with this name already exists. Please choose a different name.'
       });
+      return;
     }
     
     res.status(500).json({
@@ -223,7 +227,7 @@ export const createTask = async (req: Request, res: Response) => {
 /**
  * Update a task
  */
-export const updateTask = async (req: Request, res: Response) => {
+export const updateTask = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const { name, settings } = req.body;
@@ -239,10 +243,11 @@ export const updateTask = async (req: Request, res: Response) => {
     );
     
     if (!existingTask) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         message: 'Task not found'
       });
+      return;
     }
     
     // If name is being updated, check for duplicates
@@ -254,10 +259,11 @@ export const updateTask = async (req: Request, res: Response) => {
       );
       
       if (duplicate) {
-        return res.status(409).json({
+        res.status(409).json({
           success: false,
           message: 'Task with this name already exists'
         });
+        return;
       }
     }
     
@@ -338,10 +344,11 @@ export const updateTask = async (req: Request, res: Response) => {
     }
     
     if (updates.length === 0) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         message: 'No fields to update'
       });
+      return;
     }
     
     // Add task ID to values
@@ -385,7 +392,7 @@ export const updateTask = async (req: Request, res: Response) => {
 /**
  * Delete a task (soft delete)
  */
-export const deleteTask = async (req: Request, res: Response) => {
+export const deleteTask = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const userId = (req as any).user?.id || 'admin-001';
@@ -400,10 +407,11 @@ export const deleteTask = async (req: Request, res: Response) => {
     );
     
     if (!task) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         message: 'Task not found'
       });
+      return;
     }
     
     // Allow deleting all tasks (user can have 0 tasks)
