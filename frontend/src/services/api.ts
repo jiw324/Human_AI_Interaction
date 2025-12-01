@@ -35,6 +35,11 @@ export interface AISettings {
   llamaApiKey?: string;
   openaiApiKey?: string;
   anthropicApiKey?: string;
+  googleApiKey?: string;
+  mistralApiKey?: string;
+  cohereApiKey?: string;
+  replicateApiKey?: string;
+  huggingfaceApiKey?: string;
   defaultModel?: string;
   autoUpdateRobotList?: boolean;
 }

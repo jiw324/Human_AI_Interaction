@@ -104,15 +104,23 @@ class LiteLLMService {
     frequencyPenalty?: number
   ): Promise<ChatCompletionResponse> {
     try {
-      const baseUrl = await configService.getValueByKey('LITELLM_API_BASE');
-      const litellmApiKey = await configService.getValueByKey('LITELLM_API_KEY');
-      const openaiApiKey = await configService.getValueByKey('OPENAI_API_KEY');
-      const defaultModel = await configService.getValueByKey('DEFAULT_AI_MODEL');
+      // Priority: Environment variables > Database config
+      const baseUrl = process.env.LITELLM_API_BASE || await configService.getValueByKey('LITELLM_API_BASE');
+      const litellmApiKey = process.env.LITELLM_API_KEY || await configService.getValueByKey('LITELLM_API_KEY');
+      const openaiApiKey = process.env.OPENAI_API_KEY || await configService.getValueByKey('OPENAI_API_KEY');
 
       if (!baseUrl) {
         console.error('❌ LiteLLM API base URL not configured');
         return { success: false, error: 'LiteLLM API base URL not configured' };
       }
+
+      // Model ID must be provided from frontend - no default fallback
+      if (!modelId) {
+        console.error('❌ No model ID provided in request');
+        return { success: false, error: 'Model ID is required. Please select a model in the frontend.' };
+      }
+
+      console.log(`🔗 Using LiteLLM endpoint: ${baseUrl}`);
 
       // Choose the right API key based on the base URL
       // If connecting directly to OpenAI, use OpenAI key; otherwise use LiteLLM key
@@ -120,8 +128,10 @@ class LiteLLMService {
       const apiKey = isDirectOpenAI ? openaiApiKey : litellmApiKey;
 
       if (!apiKey) {
-        console.error(`❌ API key not configured for ${isDirectOpenAI ? 'OpenAI' : 'LiteLLM'}`);
-        return { success: false, error: `${isDirectOpenAI ? 'OpenAI' : 'LiteLLM'} API key not configured` };
+        console.warn(`⚠️  No API key configured for ${isDirectOpenAI ? 'OpenAI' : 'LiteLLM'}`);
+        console.warn(`⚠️  Attempting request without authentication (may work for public proxies)`);
+      } else {
+        console.log(`🔑 Using API key: ${apiKey.substring(0, 10)}...`);
       }
 
       const headers: Record<string, string> = {
@@ -136,7 +146,7 @@ class LiteLLMService {
       console.log(`💬 Sending chat request to: ${url}`);
 
       const requestData: LiteLLMRequest = {
-        model: modelId || defaultModel || 'gpt-3.5-turbo',
+        model: modelId, // Use model from frontend - no fallback
         messages: messages,
         temperature: temperature !== undefined ? temperature : 0.7,
         max_tokens: maxTokens || 1000,

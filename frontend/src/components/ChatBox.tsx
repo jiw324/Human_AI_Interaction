@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './ChatBox.css';
-import { chatAPI, conversationsAPI, type Message, type Conversation, type AIModel } from '../services/api';
-import { getDeviceId } from '../utils/deviceId';
+import { chatAPI, type Message, type Conversation, type AIModel } from '../services/api';
 import { v4 as uuidv4 } from 'uuid';
 
 interface AISettings {
@@ -123,6 +122,8 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
 
   // Conversation ID - will be set when loading existing conversation or creating new one
   const [conversationId, setConversationId] = useState<string>('');
+  // Conversation creation time - set once when conversation is created, never changes
+  const [conversationCreatedAt, setConversationCreatedAt] = useState<Date>(new Date());
 
   const [messages, setMessages] = useState<Message[]>([]);
   
@@ -149,23 +150,29 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
   // Get current greeting from task prompt
   const currentGreeting = currentSettings.taskPrompt || `Hello! You are chatting with ${selectedModel.name}. How can I help you today?`;
 
-  // Load messages from backend or localStorage on mount
+  // Load messages from localStorage only on mount
   useEffect(() => {
     const loadMessages = async () => {
-      console.log('📡 Loading conversation on open...');
+      console.log('📡 Loading conversation...');
       
-      // First, try loading from localStorage (fastest)
+      // Try loading from localStorage only
       const savedChat = localStorage.getItem('currentChat');
       if (savedChat) {
         try {
           const parsed = JSON.parse(savedChat);
           
-          // Set conversation ID if it exists
+          // Set conversation ID and creation time if they exist
           if (parsed.id) {
             setConversationId(parsed.id);
             console.log('✅ Loaded chat from localStorage');
             console.log(`   - Conversation ID: ${parsed.id}`);
             console.log(`   - Messages: ${parsed.messages.length}`);
+            
+            // Load the original creation time
+            if (parsed.createdAt) {
+              setConversationCreatedAt(new Date(parsed.createdAt));
+              console.log(`   - Created at: ${new Date(parsed.createdAt).toLocaleString()}`);
+            }
           }
           
           // Convert date strings back to Date objects
@@ -183,47 +190,18 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
           setIsLoadingMessages(false);
           return;
         } catch (error) {
-          console.error('Error parsing saved chat:', error);
+          console.error('⚠️ Error parsing saved chat:', error);
         }
       }
       
-      // If localStorage has no data, try backend
-      try {
-        const userId = await getDeviceId(); // Unique per device/browser - consistent across sessions
-        console.log('ℹ️ No localStorage data, checking backend for device:', userId);
-        
-        const conversations = await conversationsAPI.getAll(userId);
-        
-        if (conversations && conversations.length > 0) {
-          // Load the most recent conversation
-          const latestConversation = conversations[0];
-          console.log('✅ Loaded latest conversation from backend:', latestConversation.title);
-          console.log(`   - Conversation ID: ${latestConversation.id}`);
-          console.log(`   - Messages: ${latestConversation.messages.length}`);
-          console.log(`   - Last updated: ${latestConversation.lastMessageAt}`);
-          
-          // Set the conversation ID so new messages save to this conversation
-          setConversationId(latestConversation.id);
-          
-          // Sort messages by timestamp (oldest first) to ensure correct order
-          const sortedMessages = [...latestConversation.messages].sort((a, b) => 
-            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-          );
-          
-          setMessages(sortedMessages);
-          setIsLoadingMessages(false);
-          return;
-        } else {
-          console.log('ℹ️ No conversations found in backend');
-        }
-      } catch (error) {
-        console.error('⚠️ Backend error:', error);
-      }
-      
-      // Final fallback: create new conversation with new ID (UUID)
+      // No localStorage data - start new conversation with TaskPrompt
       const newConversationId = uuidv4();
+      const creationTime = new Date(); // Set creation time once
+      
       setConversationId(newConversationId);
+      setConversationCreatedAt(creationTime); // Store creation time
       console.log('🆕 Starting new conversation with ID:', newConversationId);
+      console.log('🕒 Conversation created at:', creationTime.toLocaleString());
       
       // Use current task prompt as greeting
       const greeting = currentSettings.taskPrompt || `Hello! You are chatting with ${selectedModel.name}. How can I help you today?`;
@@ -234,7 +212,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
           id: uuidv4(),
           text: greeting,
           sender: 'ai' as const,
-          timestamp: new Date()
+          timestamp: creationTime // Use the same creation time
         }
       ]);
       setIsLoadingMessages(false);
@@ -262,7 +240,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
           greeting: currentGreeting // Always save current greeting
         },
         messages: messages,
-        createdAt: messages[0].timestamp,
+        createdAt: conversationCreatedAt, // Use fixed creation time
         lastMessageAt: messages[messages.length - 1].timestamp
       };
       localStorage.setItem('currentChat', JSON.stringify(conversation));
@@ -283,10 +261,10 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
             greeting: currentGreeting // Always save current greeting
           },
           messages: messages,
-          createdAt: new Date(messages[0].timestamp),
-          lastMessageAt: new Date(messages[messages.length - 1].timestamp)
+          createdAt: conversationCreatedAt, // Use fixed creation time (never changes)
+          lastMessageAt: new Date(messages[messages.length - 1].timestamp) // Updates with each message
         };
-        console.log(`💾 Saving conversation ${conversationId} with ${messages.length} messages`);
+        console.log(`💾 Saving conversation ${conversationId} (created: ${conversationCreatedAt.toLocaleString()}) with ${messages.length} messages`);
         onSaveConversation(conversation);
       }, 1000); // Wait 1 second after last change before saving
 
@@ -316,7 +294,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
       systemPrompt: currentSettings.systemPrompt,
       taskPrompt: currentSettings.taskPrompt || '',
       // LiteLLM-specific parameters
-      modelId: currentTask?.settings.defaultModel || 'gpt-3.5-turbo',
+      modelId: currentTask?.settings.defaultModel || 'gpt-4o-2024-11-20',
       topP: 1.0,
       presencePenalty: 0.0,
       frequencyPenalty: 0.0,

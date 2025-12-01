@@ -396,7 +396,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
                     {conversation.messageCount ?? conversation.messages.length} msgs
                   </span>
                   <span className="last-activity">
-                    {formatDate(conversation.lastMessageAt)}
+                    {formatDate(conversation.createdAt)}
                   </span>
                 </div>
                 {!isSelectionMode && (

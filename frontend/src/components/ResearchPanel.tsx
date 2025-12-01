@@ -20,6 +20,11 @@ interface AISettings {
   llamaApiKey?: string;
   openaiApiKey?: string;
   anthropicApiKey?: string;
+  googleApiKey?: string;
+  mistralApiKey?: string;
+  cohereApiKey?: string;
+  replicateApiKey?: string;
+  huggingfaceApiKey?: string;
   defaultModel?: string;
   autoUpdateRobotList?: boolean;
 }
@@ -27,14 +32,6 @@ interface AISettings {
 interface ResearchPanelProps {
   tasks: Task[];
   onTasksChange: (tasks: Task[]) => void;
-}
-
-interface ModelInfo {
-  id: string;
-  name: string;
-  modelId: string;
-  provider: string;
-  status: 'available' | 'unknown';
 }
 
 const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) => {
@@ -64,94 +61,8 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
     setEditingSettings(null);
   }, [activeTaskId]);
   
-  // System Config State (just for UI, actual values come from currentSettings)
-  const [showLlamaKey, setShowLlamaKey] = useState<boolean>(false);
-  const [availableModels] = useState<string[]>([
-    'gpt-3.5-turbo',
-    'gpt-4',
-    'gpt-4o',
-    'gpt-4o-mini',
-    'claude-3-5-sonnet-20241022',
-    'claude-3-opus-20240229'
-  ]);
-  const [configTab, setConfigTab] = useState<'clear' | 'reset' | 'update'>('update');
-  const [models] = useState<ModelInfo[]>([
-    {
-      id: '1',
-      name: 'Anthropic Claude-V2.1',
-      modelId: 'Anthropic Claude-V...',
-      provider: 'unknown',
-      status: 'unknown'
-    },
-    {
-      id: '2',
-      name: 'Anthropic Claude-V3.5 Sonnet',
-      modelId: 'Anthropic Claude-V...',
-      provider: 'unknown',
-      status: 'unknown'
-    },
-    {
-      id: '3',
-      name: 'Meta llama3-7bb',
-      modelId: 'Meta llama3-7bb',
-      provider: 'unknown',
-      status: 'unknown'
-    },
-    {
-      id: '4',
-      name: 'Anthropic Claude-V3.7 Sonnet',
-      modelId: 'Anthropic Claude-V...',
-      provider: 'unknown',
-      status: 'unknown'
-    },
-    {
-      id: '5',
-      name: 'GPT-3.5-Turbo',
-      modelId: 'GPT-3.5-Turbo',
-      provider: 'unknown',
-      status: 'unknown'
-    },
-    {
-      id: '6',
-      name: 'Titan Text Embeddings V2',
-      modelId: 'Titan Text Embeddin...',
-      provider: 'unknown',
-      status: 'unknown'
-    },
-    {
-      id: '7',
-      name: 'Anthropic Claude-V3',
-      modelId: 'Anthropic Claude-V3',
-      provider: 'unknown',
-      status: 'unknown'
-    },
-    {
-      id: '8',
-      name: 'Anthropic Claude-V2',
-      modelId: 'Anthropic Claude-V2',
-      provider: 'unknown',
-      status: 'unknown'
-    },
-    {
-      id: '9',
-      name: 'Amazon Titan Lite',
-      modelId: 'Amazon Titan Lite',
-      provider: 'unknown',
-      status: 'unknown'
-    }
-  ]);
-  
   // Find active task (may be null if no tasks exist)
   const activeTask = tasks.length > 0 ? tasks.find(t => t.id === activeTaskId) : null;
-
-  const personalityOptions = [
-    { value: 'friendly', label: 'Friendly & Warm' },
-    { value: 'professional', label: 'Professional & Formal' },
-    { value: 'creative', label: 'Creative & Imaginative' },
-    { value: 'analytical', label: 'Analytical & Logical' },
-    { value: 'casual', label: 'Casual & Relaxed' },
-    { value: 'expert', label: 'Expert & Authoritative' }
-  ];
 
   // Get current settings (from editing state or active task, or defaults if no task)
   const defaultSettings: AISettings = {
@@ -164,12 +75,17 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
     maxTokens: 1000,
     systemPrompt: 'You are a helpful AI assistant. Be friendly, informative, and engaging in your responses.',
     taskPrompt: 'Please provide specific instructions or context for this task. This prompt will guide the AI in understanding your specific requirements and objectives.',
-    llamaBaseUrl: 'https://llm-proxy.oai-at.org/',
+    llamaBaseUrl: 'https://litellm.cloud.osu.edu',
     llamaServiceUrl: '',
     llamaApiKey: '',
     openaiApiKey: '',
     anthropicApiKey: '',
-    defaultModel: 'gpt-4',
+    googleApiKey: '',
+    mistralApiKey: '',
+    cohereApiKey: '',
+    replicateApiKey: '',
+    huggingfaceApiKey: '',
+    defaultModel: 'gpt-4o-2024-11-20',
     autoUpdateRobotList: false
   };
   
@@ -294,55 +210,6 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
     }
   };
 
-  const resetToDefaults = async () => {
-    if (!activeTask) {
-      alert('⚠️ Please create a task first before resetting settings.');
-      return;
-    }
-    
-    const defaultSettings: AISettings = {
-      personality: 'friendly',
-      responseSpeed: 1.0,
-      creativity: 0.7,
-      helpfulness: 0.9,
-      verbosity: 0.6,
-      temperature: 0.7,
-      maxTokens: 1000,
-      systemPrompt: 'You are a helpful AI assistant. Be friendly, informative, and engaging in your responses.',
-      taskPrompt: 'Please provide specific instructions or context for this task. This prompt will guide the AI in understanding your specific requirements and objectives.',
-      llamaBaseUrl: 'https://llm-proxy.oai-at.org/',
-      llamaServiceUrl: '',
-      llamaApiKey: '',
-      openaiApiKey: '',
-      anthropicApiKey: '',
-      defaultModel: 'gpt-4',
-      autoUpdateRobotList: false
-    };
-    
-    try {
-      console.log('🔄 Resetting task to default settings...');
-      const updatedTask = await tasksAPI.update(activeTask.id, undefined, defaultSettings);
-      if (updatedTask) {
-        const updatedTasks = tasks.map(t =>
-          t.id === activeTaskId ? updatedTask : t
-        );
-        onTasksChange(updatedTasks);
-        
-        // Clear editing state
-        setEditingSettings(null);
-        
-        // Save to localStorage
-        localStorage.setItem('research_tasks', JSON.stringify(updatedTasks));
-        console.log('💾 Task reset saved to localStorage');
-        
-        alert('Settings reset to defaults!');
-      }
-    } catch (error) {
-      console.error('❌ Failed to reset settings:', error);
-      alert('Failed to reset settings. Please try again.');
-    }
-  };
-
   const addTask = async () => {
     // FIRST: Check lock to prevent any duplicate calls
     if (isAddingTask.current) {
@@ -377,11 +244,16 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
       maxTokens: 1000,
       systemPrompt: 'You are a helpful AI assistant. Be friendly, informative, and engaging in your responses.',
       taskPrompt: 'Please provide specific instructions or context for this task. This prompt will guide the AI in understanding your specific requirements and objectives.',
-      llamaBaseUrl: 'https://llm-proxy.oai-at.org/',
+      llamaBaseUrl: 'http://localhost:4000',
       llamaServiceUrl: '',
       llamaApiKey: '',
       openaiApiKey: '',
       anthropicApiKey: '',
+      googleApiKey: '',
+      mistralApiKey: '',
+      cohereApiKey: '',
+      replicateApiKey: '',
+      huggingfaceApiKey: '',
       defaultModel: 'gpt-4',
       autoUpdateRobotList: false
     };
@@ -452,31 +324,6 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
       }
     }
   };
-
-  // System Config Handlers
-  const handleRefreshModelList = () => {
-    alert('Refreshing model list...');
-  };
-
-  const handleSaveConfiguration = async () => {
-    // System config is now part of task settings, so use handleUpdate
-    await handleUpdate();
-  };
-
-  const handleClearTestRobots = () => {
-    if (window.confirm('Are you sure you want to clear all test robots?')) {
-      alert('Test robots cleared!');
-    }
-  };
-
-  const handleResetAndSyncRobots = () => {
-    if (window.confirm('Are you sure you want to reset and sync robots?')) {
-      alert('Robots reset and synced!');
-    }
-  };
-
-  // Use currentSettings which includes any unsaved edits
-  const settings = currentSettings;
 
   return (
     <div className="research-panel">
@@ -604,21 +451,57 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
         {/* Model Selection */}
         {activeTask && (
           <div className="config-section">
-            <h3 className="section-title">Select Model</h3>
+            <h3 className="section-title">🤖 Select AI Model</h3>
+            <p className="section-description">Choose from any model supported by your LiteLLM configuration</p>
             <div className="setting-group">
               <label>AI Model</label>
               <select
-                value={currentSettings.defaultModel || 'gpt-4'}
+                value={currentSettings.defaultModel || 'gpt-4o-2024-11-20'}
                 onChange={(e) => handleSettingChange('defaultModel', e.target.value)}
                 className="setting-select"
               >
-                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                <option value="gpt-4">GPT-4</option>
-                <option value="gpt-4o">GPT-4o</option>
-                <option value="gpt-4o-mini">GPT-4o Mini</option>
-                <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
-                <option value="claude-3-opus-20240229">Claude 3 Opus</option>
+                <optgroup label="🤖 OpenAI Models (OSU LiteLLM)">
+                  <option value="gpt-4o-2024-11-20">GPT-4o (Latest)</option>
+                  <option value="gpt-4o-mini-2024-07-18">GPT-4o Mini (Fast & Affordable)</option>
+                  <option value="gpt-35-turbo-0125">GPT-3.5 Turbo</option>
+                  <option value="gpt-5-2025-08-07">GPT-5 (Experimental)</option>
+                  <option value="gpt-5.1-2025-11-13">GPT-5.1 (Experimental)</option>
+                  <option value="gpt-4.1-2025-04-14">GPT-4.1</option>
+                  <option value="gpt-4.1-mini-2025-04-14">GPT-4.1 Mini</option>
+                  <option value="gpt-4.1-nano-2025-04-14">GPT-4.1 Nano</option>
+                  <option value="o3-mini-2025-01-31">o3 Mini</option>
+                  <option value="o4-mini-2025-04-16">o4 Mini</option>
+                </optgroup>
+                <optgroup label="🧠 Anthropic Models (Claude)">
+                  <option value="claude-3-5-sonnet-20240620">Claude 3.5 Sonnet</option>
+                  <option value="claude-3-5-haiku-20241022">Claude 3.5 Haiku</option>
+                  <option value="claude-sonnet-4-20250514">Claude 4 Sonnet</option>
+                  <option value="claude-opus-4-20250514">Claude 4 Opus</option>
+                  <option value="claude-sonnet-4-20250514-thinking">Claude 4 Sonnet (Thinking)</option>
+                  <option value="claude-opus-4-1-20250805">Claude 4.1 Opus</option>
+                  <option value="claude-sonnet-4-5-20250929">Claude 4.5 Sonnet</option>
+                </optgroup>
+                <optgroup label="🌟 Google Models (Gemini)">
+                  <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                  <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                  <option value="gemini-3-pro-preview">Gemini 3 Pro (Preview)</option>
+                </optgroup>
+                <optgroup label="🦙 Meta Models (Llama)">
+                  <option value="llama3-3-70b-instruct">Llama 3.3 70B Instruct</option>
+                  <option value="osc-llama3-2-3b">OSC Llama 3.2 3B</option>
+                </optgroup>
+                <optgroup label="📦 Other Models">
+                  <option value="mistral-7b-instruct">Mistral 7B Instruct</option>
+                  <option value="nova-pro-v1">Nova Pro</option>
+                  <option value="nova-lite-v1">Nova Lite</option>
+                  <option value="nova-micro-v1">Nova Micro</option>
+                  <option value="deepseek-r1-v1:0">DeepSeek R1</option>
+                </optgroup>
               </select>
+              <small className="form-hint">
+                💡 Tip: Configure API keys above for the models you want to use. 
+                LiteLLM will automatically route requests to the correct provider.
+              </small>
             </div>
             <button
               type="button"
@@ -629,250 +512,6 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
             </button>
           </div>
         )}
-
-        {/* Divider */}
-        {activeTask && (
-          <>
-        <div className="config-divider">
-          <h2 className="divider-title">⚙️ System Configuration</h2>
-        </div>
-
-        {/* System Configuration Section */}
-        <div className="system-config-section">
-          <div className="config-container">
-            {/* Left Column */}
-            <div className="config-left-column">
-              {/* LLM Settings */}
-              <section className="config-section">
-                <h3 className="section-title">Llama.LM Settings</h3>
-                
-                <div className="form-group">
-                  <label className="form-label">Llama.LM Base URL</label>
-                  <input
-                    type="text"
-                    value={currentSettings.llamaBaseUrl || ''}
-                    onChange={(e) => handleSettingChange('llamaBaseUrl', e.target.value)}
-                    className="form-input"
-                    placeholder="https://llm-proxy.oai-at.org/"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Llama.LM Service base URL</label>
-                  <input
-                    type="text"
-                    value={currentSettings.llamaServiceUrl || ''}
-                    onChange={(e) => handleSettingChange('llamaServiceUrl', e.target.value)}
-                    className="form-input"
-                    placeholder="Enter service base URL"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Llama.LM API Key</label>
-                  <div className="input-with-toggle">
-                    <input
-                      type={showLlamaKey ? 'text' : 'password'}
-                      value={currentSettings.llamaApiKey || ''}
-                      onChange={(e) => handleSettingChange('llamaApiKey', e.target.value)}
-                      className="form-input"
-                      placeholder="••••••••••••••••••"
-                    />
-                    <button
-                      type="button"
-                      className="toggle-visibility-btn"
-                      onClick={() => setShowLlamaKey(!showLlamaKey)}
-                      disabled
-                    >
-                      {showLlamaKey ? '🙈' : '👁️'}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="form-actions">
-                  <button type="button" className="btn-secondary" onClick={handleRefreshModelList} disabled>
-                    🔄 REFRESH MODEL LIST
-                  </button>
-                  <button type="button" className="btn-primary" onClick={handleSaveConfiguration} disabled>
-                    💾 SAVE CONFIGURATION
-                  </button>
-                </div>
-
-                <div className="checkbox-group">
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      checked={currentSettings.autoUpdateRobotList || false}
-                      onChange={(e) => handleSettingChange('autoUpdateRobotList', e.target.checked)}
-                    />
-                    <span>Automatically Update Robot List</span>
-                  </label>
-                </div>
-              </section>
-
-              {/* Other API Keys */}
-              <section className="config-section">
-                <h3 className="section-title">Other API Keys</h3>
-                
-                <div className="form-group">
-                  <label className="form-label">OpenAI API Key</label>
-                  <input
-                    type="password"
-                    value={currentSettings.openaiApiKey || ''}
-                    onChange={(e) => handleSettingChange('openaiApiKey', e.target.value)}
-                    className="form-input"
-                    placeholder="sk-..."
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Anthropic API Key</label>
-                  <input
-                    type="password"
-                    value={currentSettings.anthropicApiKey || ''}
-                    onChange={(e) => handleSettingChange('anthropicApiKey', e.target.value)}
-                    className="form-input"
-                    placeholder="sk-ant-..."
-                  />
-                </div>
-
-                <div className="form-actions">
-                  <button type="button" className="btn-primary full-width" onClick={handleSaveConfiguration} disabled>
-                    💾 SAVE ALL CONFIGURATIONS
-                  </button>
-                </div>
-              </section>
-
-              {/* Task Settings */}
-              <section className="config-section">
-                <h3 className="section-title">Task Settings</h3>
-                
-                <div className="form-group">
-                  <label className="form-label">Default Model</label>
-                  <select
-                    value={currentSettings.defaultModel || ''}
-                    onChange={(e) => handleSettingChange('defaultModel', e.target.value)}
-                    className="form-select"
-                  >
-                    <option value="">Select default model for all tasks</option>
-                    {availableModels.map((model) => (
-                      <option key={model} value={model}>
-                        {model}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="form-hint">
-                    Select the default model for this task.
-                  </p>
-                </div>
-              </section>
-            </div>
-
-            {/* Right Column */}
-            <div className="config-right-column">
-              {/* Available Models */}
-              <section className="config-section available-models-section">
-                <h3 className="section-title">Available models</h3>
-                <div className="models-list">
-                  {availableModels.map((model, index) => (
-                    <div key={index} className="model-item">
-                      <div className="model-name">{model}</div>
-                      <div className="model-status">unknown | {model}</div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              {/* Model and Robot Management */}
-              <section className="config-section robot-management-section">
-                <h3 className="section-title">Model and Robot Management</h3>
-                
-                <div className="tab-navigation">
-                  <button
-                    type="button"
-                    className={`config-tab-btn ${configTab === 'clear' ? 'active' : ''}`}
-                    onClick={() => setConfigTab('clear')}
-                    disabled
-                  >
-                    CLEAR TEST ROBOTS
-                  </button>
-                  <button
-                    type="button"
-                    className={`config-tab-btn ${configTab === 'reset' ? 'active' : ''}`}
-                    onClick={() => setConfigTab('reset')}
-                    disabled
-                  >
-                    ⚠️ RESET AND SYNC ROBOTS
-                  </button>
-                  <button
-                    type="button"
-                    className={`config-tab-btn ${configTab === 'update' ? 'active' : ''}`}
-                    onClick={() => setConfigTab('update')}
-                    disabled
-                  >
-                    🔄 UPDATE ROBOT LIST
-                  </button>
-                </div>
-
-                <div className="tab-content">
-                  {configTab === 'clear' && (
-                    <div className="tab-panel">
-                      <p className="tab-description">
-                        Clear all test robots from the system. This action cannot be undone.
-                      </p>
-                      <button type="button" className="btn-danger" onClick={handleClearTestRobots} disabled>
-                        Clear All Test Robots
-                      </button>
-                    </div>
-                  )}
-
-                  {configTab === 'reset' && (
-                    <div className="tab-panel">
-                      <p className="tab-description">
-                        Reset and synchronize all robots with the latest configuration.
-                      </p>
-                      <button type="button" className="btn-warning" onClick={handleResetAndSyncRobots} disabled>
-                        Reset and Sync Robots
-                      </button>
-                    </div>
-                  )}
-
-                  {configTab === 'update' && (
-                    <div className="models-grid">
-                      {models.map((model) => (
-                        <div key={model.id} className="model-card">
-                          <div className="model-card-header">
-                            <h4 className="model-card-title">{model.name}</h4>
-                          </div>
-                          <div className="model-card-body">
-                            <p className="model-detail">
-                              <strong>Model:</strong> {model.modelId}
-                            </p>
-                            <p className="model-detail">
-                              <strong>Provider:</strong> {model.provider}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </section>
-            </div>
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="action-buttons">
-          <button type="button" className="update-btn" onClick={handleUpdate} disabled>
-            💾 Update All Settings
-          </button>
-          <button type="button" className="reset-btn" onClick={resetToDefaults} disabled>
-            🔄 Reset to Defaults
-          </button>
-        </div>
-            </>
-            )}
             
             {!activeTask && tasks.length === 0 && (
               <div className="no-task-message">

@@ -26,12 +26,37 @@ class ConfigService {
       {
         key: 'OPENAI_API_KEY',
         value: '',
-        description: 'OpenAI API Key',
+        description: 'OpenAI API Key (for GPT models)',
       },
       {
         key: 'ANTHROPIC_API_KEY',
         value: '',
-        description: 'Anthropic API Key',
+        description: 'Anthropic API Key (for Claude models)',
+      },
+      {
+        key: 'GOOGLE_API_KEY',
+        value: '',
+        description: 'Google AI API Key (for Gemini models)',
+      },
+      {
+        key: 'MISTRAL_API_KEY',
+        value: '',
+        description: 'Mistral AI API Key (for Mistral models)',
+      },
+      {
+        key: 'COHERE_API_KEY',
+        value: '',
+        description: 'Cohere API Key (for Command models)',
+      },
+      {
+        key: 'REPLICATE_API_KEY',
+        value: '',
+        description: 'Replicate API Key (for open-source models)',
+      },
+      {
+        key: 'HUGGINGFACE_API_KEY',
+        value: '',
+        description: 'HuggingFace API Key (for HF models)',
       },
       {
         key: 'AUTO_UPDATE_MODELS',
@@ -143,6 +168,11 @@ class ConfigService {
       apiKey: (await this.getValueByKey('LITELLM_API_KEY')) || '',
       openaiKey: (await this.getValueByKey('OPENAI_API_KEY')) || '',
       anthropicKey: (await this.getValueByKey('ANTHROPIC_API_KEY')) || '',
+      googleKey: (await this.getValueByKey('GOOGLE_API_KEY')) || '',
+      mistralKey: (await this.getValueByKey('MISTRAL_API_KEY')) || '',
+      cohereKey: (await this.getValueByKey('COHERE_API_KEY')) || '',
+      replicateKey: (await this.getValueByKey('REPLICATE_API_KEY')) || '',
+      huggingfaceKey: (await this.getValueByKey('HUGGINGFACE_API_KEY')) || '',
       autoUpdateModels: (await this.getValueByKey('AUTO_UPDATE_MODELS')) === 'true',
       defaultModel: (await this.getValueByKey('DEFAULT_AI_MODEL')) || 'gpt-3.5-turbo',
     };
@@ -167,6 +197,21 @@ class ConfigService {
     }
     if (config.anthropicKey !== undefined) {
       updates.push({ key: 'ANTHROPIC_API_KEY', value: config.anthropicKey });
+    }
+    if (config.googleKey !== undefined) {
+      updates.push({ key: 'GOOGLE_API_KEY', value: config.googleKey });
+    }
+    if (config.mistralKey !== undefined) {
+      updates.push({ key: 'MISTRAL_API_KEY', value: config.mistralKey });
+    }
+    if (config.cohereKey !== undefined) {
+      updates.push({ key: 'COHERE_API_KEY', value: config.cohereKey });
+    }
+    if (config.replicateKey !== undefined) {
+      updates.push({ key: 'REPLICATE_API_KEY', value: config.replicateKey });
+    }
+    if (config.huggingfaceKey !== undefined) {
+      updates.push({ key: 'HUGGINGFACE_API_KEY', value: config.huggingfaceKey });
     }
     if (config.autoUpdateModels !== undefined) {
       updates.push({ key: 'AUTO_UPDATE_MODELS', value: config.autoUpdateModels ? 'true' : 'false' });

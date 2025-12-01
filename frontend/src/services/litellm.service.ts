@@ -31,6 +31,11 @@ export interface LiteLLMConfig {
   apiKey?: string;
   openaiKey?: string;
   anthropicKey?: string;
+  googleKey?: string;
+  mistralKey?: string;
+  cohereKey?: string;
+  replicateKey?: string;
+  huggingfaceKey?: string;
   autoUpdateModels: boolean;
   defaultModel: string;
 }
