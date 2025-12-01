@@ -28,27 +28,61 @@ const generateAIResponse = async (
     
     // Build message history for LiteLLM in the correct format
     const messages: LiteLLMMessage[] = [];
+
+    // Some providers on Bedrock (e.g. DeepSeek, AWS Nova) require conversations
+    // to start with a user message – they do not allow a system message as the
+    // first role.
+    const modelId = (settings?.modelId || '').toLowerCase();
+    const requiresUserFirst =
+      modelId.includes('deepseek') ||   // DeepSeek on Bedrock
+      modelId.includes('nova') ||       // AWS Nova models
+      modelId.includes('llama3');       // Llama 3 models on Bedrock
     
     // 1. Add System Prompt - This sets the AI's behavior and personality
     // Example: "You are a helpful AI assistant. Be friendly, informative, and engaging."
-    if (settings?.systemPrompt) {
-      console.log(`📋 [Chat] Using System Prompt: "${settings.systemPrompt.substring(0, 50)}..."`);
+    // For models that must start with a user message, we will NOT send a separate
+    // system role; instead we'll prepend the system prompt to the first user message.
+    const systemPrompt: string | undefined = settings?.systemPrompt;
+    if (systemPrompt && !requiresUserFirst) {
+      console.log(`📋 [Chat] Using System Prompt: "${systemPrompt.substring(0, 50)}..."`);
       messages.push({
         role: 'system',
-        content: settings.systemPrompt,
+        content: systemPrompt,
       });
     }
     
     // Add conversation history (last 10 messages for context)
+    let hasUserMessage = false;
+    let hasPrependedSystemToFirstUser = false;
+
     if (messageHistory && messageHistory.length > 0) {
       const recentHistory = messageHistory.slice(-10);
-      for (const msg of recentHistory) {
+
+      for (let i = 0; i < recentHistory.length; i++) {
+        const msg = recentHistory[i];
+
         if (msg.sender === 'user') {
+          let content = msg.text;
+
+          // For models that must start with a user message, prepend system prompt
+          // to the very first user message we send.
+          if (requiresUserFirst && systemPrompt && !hasPrependedSystemToFirstUser && !hasUserMessage) {
+            content = `[System Instructions: ${systemPrompt}]\n\n${msg.text}`;
+            hasPrependedSystemToFirstUser = true;
+            console.log(`📋 [Chat] Prepending System Prompt to first user history message for model ${settings.modelId}`);
+          }
+
           messages.push({
             role: 'user',
-            content: msg.text,
+            content,
           });
+          hasUserMessage = true;
         } else if (msg.sender === 'ai') {
+          // For requiresUserFirst models, skip assistant messages that would
+          // appear before any user message.
+          if (requiresUserFirst && !hasUserMessage) {
+            continue;
+          }
           messages.push({
             role: 'assistant',
             content: msg.text,
@@ -56,11 +90,20 @@ const generateAIResponse = async (
         }
       }
     }
-    
+
     // Add current user message
+    let currentUserContent = userMessage;
+
+    // If there was no prior user message in history for a requiresUserFirst model,
+    // prepend the system prompt to the current user message.
+    if (requiresUserFirst && systemPrompt && !hasUserMessage) {
+      currentUserContent = `[System Instructions: ${systemPrompt}]\n\n${userMessage}`;
+      console.log(`📋 [Chat] Prepending System Prompt to current user message for model ${settings.modelId}`);
+    }
+
     messages.push({
       role: 'user',
-      content: userMessage,
+      content: currentUserContent,
     });
     
     console.log(`📝 [Chat] Message history: ${messages.length} messages`);
