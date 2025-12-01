@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { type Conversation, type Message, conversationsAPI, authService } from '../services/api';
+import React, { useState, useRef } from 'react';
+import { type Conversation, conversationsAPI, authService } from '../services/api';
 import { getDeviceId } from '../utils/deviceId';
 import './ConversationHistory.css';
 
@@ -18,7 +18,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const isLoadingRef = useRef(false); // Track if currently loading
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
-  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [, setIsLoadingMessages] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
 
@@ -277,7 +277,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
     const matchesBasic = 
       conv.title.toLowerCase().includes(search) ||
       conv.aiModel.name.toLowerCase().includes(search) ||
-      conv.aiModel.personality.toLowerCase().includes(search);
+      (conv.aiModel.personality || '').toLowerCase().includes(search);
     
     // Search in conversation ID
     const matchesConvId = conv.id.toLowerCase().includes(search);
@@ -300,17 +300,6 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
       hour: '2-digit',
       minute: '2-digit'
     });
-  };
-
-  const getConversationPreview = (messages: Message[]) => {
-    const lastMessage = messages[messages.length - 1];
-    if (!lastMessage) return 'No messages';
-    
-    const preview = lastMessage.text.length > 50 
-      ? lastMessage.text.substring(0, 50) + '...'
-      : lastMessage.text;
-    
-    return `${lastMessage.sender === 'user' ? 'You: ' : 'AI: '}${preview}`;
   };
 
   return (
@@ -469,11 +458,16 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
         <div className="modal-overlay" onClick={() => setSelectedConversation(null)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <div className="modal-title-section">
+                <div className="modal-title-section">
                 <span className="modal-icon">{selectedConversation.aiModel.icon}</span>
                 <div>
                   <h3>{selectedConversation.title}</h3>
-                  <p className="modal-subtitle">{selectedConversation.aiModel.name} • {selectedConversation.aiModel.personality}</p>
+                  <p className="modal-subtitle">
+                    {selectedConversation.aiModel.name}
+                    {selectedConversation.aiModel.personality
+                      ? ` • ${selectedConversation.aiModel.personality}`
+                      : ''}
+                  </p>
                 </div>
               </div>
               <div className="modal-actions">

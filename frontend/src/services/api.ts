@@ -79,14 +79,15 @@ async function fetchAPI(
   options: RequestInit = {}
 ): Promise<Response> {
   const token = authService.getToken();
-  
-  const headers: HeadersInit = {
+
+  // Use a simple string map for headers to avoid type issues when adding Authorization
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...(options.headers || {})
+    ...(options.headers as Record<string, string> | undefined || {})
   };
 
   if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+    headers.Authorization = `Bearer ${token}`;
   }
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {

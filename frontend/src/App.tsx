@@ -4,22 +4,10 @@ import ChatBox from './components/ChatBox'
 import ResearchPanel from './components/ResearchPanel'
 import ConversationHistory from './components/ConversationHistory'
 import LoginPage from './components/LoginPage'
-import { authService, tasksAPI, conversationsAPI, type Task, type Conversation, type Message, type AIModel } from './services/api'
+import { authService, tasksAPI, conversationsAPI, type Task, type Conversation, type Message } from './services/api'
 import { getDeviceId } from './utils/deviceId'
 import { useBackendHealth } from './hooks/useBackendHealth'
 import './App.css'
-
-interface AISettings {
-  personality: string;
-  responseSpeed: number;
-  creativity: number;
-  helpfulness: number;
-  verbosity: number;
-  temperature: number;
-  maxTokens: number;
-  systemPrompt: string;
-  taskPrompt: string;
-}
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
@@ -33,46 +21,6 @@ function App() {
   // Backend health check - runs every 15 seconds
   const healthStatus = useBackendHealth();
   const backendStatus = healthStatus.isOnline ? 'online' : 'offline';
-
-  const defaultSettings: AISettings = {
-    personality: 'friendly',
-    responseSpeed: 1.0,
-    creativity: 0.7,
-    helpfulness: 0.9,
-    verbosity: 0.6,
-    temperature: 0.7,
-    maxTokens: 1000,
-    systemPrompt: 'You are a helpful AI assistant. Be friendly, informative, and engaging in your responses.',
-    taskPrompt: ''
-  };
-
-  const getInitialSettings = (): Record<string, AISettings> => {
-    const savedSettings = localStorage.getItem('aiSettingsByModel');
-    if (savedSettings) {
-      try {
-        return JSON.parse(savedSettings);
-      } catch (error) {
-        console.error('Error parsing saved settings:', error);
-      }
-    }
-    return {
-      'Task 1': { ...defaultSettings, personality: 'analytical', taskPrompt: '' },
-      'Task 2': { ...defaultSettings, personality: 'creative', taskPrompt: '' },
-      'Task 3': { ...defaultSettings, personality: 'expert', taskPrompt: '' },
-      'Task 4': { ...defaultSettings, personality: 'friendly', taskPrompt: '' }
-    };
-  };
-
-  const [aiSettingsByModel, setAiSettingsByModel] = useState<Record<string, AISettings>>(getInitialSettings);
-
-  const handleSettingsChangeForModel = (model: string, newSettings: AISettings) => {
-    setAiSettingsByModel(prev => {
-      const updated = { ...prev, [model]: newSettings };
-      // Save to localStorage
-      localStorage.setItem('aiSettingsByModel', JSON.stringify(updated));
-      return updated;
-    });
-  };
 
   // Load tasks from localStorage first, then sync with backend
   useEffect(() => {

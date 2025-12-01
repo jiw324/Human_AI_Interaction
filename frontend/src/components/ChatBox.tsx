@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './ChatBox.css';
-import { chatAPI, type Message, type Conversation, type AIModel } from '../services/api';
+import { chatAPI, type Message, type Conversation } from '../services/api';
 import { v4 as uuidv4 } from 'uuid';
 
 interface AISettings {
@@ -74,14 +74,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
       </div>
     );
   }
-
-  // Convert tasks to AI models format
-  const aiModels = tasks.map((task, index) => ({
-    name: task.name,
-    greeting: task.settings.taskPrompt || `Hello! You are chatting with ${task.name}. How can I help you today?`,
-    personality: task.settings.personality,
-    icon: ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'][index] || '💬'
-  }));
 
   // Load or initialize conversation from localStorage
   const [selectedModel] = useState(() => {
