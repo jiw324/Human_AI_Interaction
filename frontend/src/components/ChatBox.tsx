@@ -380,33 +380,43 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
           </div>
         ) : (
           <>
-        {messages.map((message) => (
-          <div key={message.id} className={`message ${message.sender}`}>
-            <div className="message-content">
-              <div className="message-text">{message.text}</div>
-              <div className="message-time">
-                {message.timestamp.toLocaleTimeString([], { 
-                  hour: '2-digit', 
-                  minute: '2-digit' 
-                })}
-              </div>
-            </div>
-          </div>
-        ))}
+            {messages.map((message) => {
+              // Many models (OpenAI-style) return responses starting with '\n\n'.
+              // Strip leading whitespace for AI messages so bubbles don't start
+              // with extra blank lines, but keep user messages as-is.
+              const displayText =
+                message.sender === 'ai'
+                  ? message.text.replace(/^\s+/, '')
+                  : message.text;
+
+              return (
+                <div key={message.id} className={`message ${message.sender}`}>
+                  <div className="message-content">
+                    <div className="message-text">{displayText}</div>
+                    <div className="message-time">
+                      {message.timestamp.toLocaleTimeString([], { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
         
-        {isTyping && (
-          <div className="message ai">
-            <div className="message-content">
-              <div className="typing-indicator">
-                <span></span>
-                <span></span>
-                <span></span>
+            {isTyping && (
+              <div className="message ai">
+                <div className="message-content">
+                  <div className="typing-indicator">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        )}
+            )}
         
-        <div ref={messagesEndRef} />
+            <div ref={messagesEndRef} />
           </>
         )}
       </div>

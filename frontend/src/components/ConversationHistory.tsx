@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { type Conversation, conversationsAPI, authService } from '../services/api';
+import { type Conversation, type Message, conversationsAPI, authService } from '../services/api';
 import { getDeviceId } from '../utils/deviceId';
 import './ConversationHistory.css';
 
@@ -94,6 +94,49 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
     }
   };
 
+  // Helper: convert conversations (with messages) to CSV text
+  const conversationsToCsv = (convs: Conversation[]): string => {
+    const header = [
+      'conversation_id',
+      'title',
+      'model_name',
+      'model_personality',
+      'sender',
+      'timestamp',
+      'text'
+    ];
+
+    const rows: string[] = [];
+    const escape = (value: unknown) => JSON.stringify(value ?? '');
+
+    rows.push(header.map(escape).join(','));
+
+    convs.forEach(conv => {
+      const modelName = conv.aiModel?.name || '';
+      const modelPersonality = conv.aiModel?.personality || '';
+
+      conv.messages.forEach(msg => {
+        // Normalise text for CSV: strip leading whitespace/newlines (especially
+        // for AI messages that often start with '\n\n') and collapse internal
+        // newlines to single spaces so they don't break the CSV layout.
+        let text = msg.text ?? '';
+        text = text.replace(/^\s+/, '').replace(/\s*\n+\s*/g, ' ');
+
+        rows.push([
+          conv.id,
+          conv.title,
+          modelName,
+          modelPersonality,
+          msg.sender,
+          (msg.timestamp instanceof Date ? msg.timestamp : new Date(msg.timestamp)).toISOString(),
+          text
+        ].map(escape).join(','));
+      });
+    });
+
+    return rows.join('\r\n');
+  };
+
   const exportConversation = async (conversation: Conversation) => {
     try {
       // Fetch full conversation with all messages from database
@@ -106,12 +149,12 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
         return;
       }
 
-      const dataStr = JSON.stringify(fullConversation, null, 2);
-      const dataBlob = new Blob([dataStr], { type: 'application/json' });
-      const url = URL.createObjectURL(dataBlob);
+      const csv = conversationsToCsv([fullConversation]);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `conversation_${conversation.id}_${new Date().toISOString().split('T')[0]}.json`;
+      link.download = `conversation_${conversation.id}_${new Date().toISOString().split('T')[0]}.csv`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -139,12 +182,12 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
         return;
       }
 
-      const dataStr = JSON.stringify(validConversations, null, 2);
-      const dataBlob = new Blob([dataStr], { type: 'application/json' });
-      const url = URL.createObjectURL(dataBlob);
+      const csv = conversationsToCsv(validConversations as Conversation[]);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `all_conversations_${new Date().toISOString().split('T')[0]}.json`;
+      link.download = `all_conversations_${new Date().toISOString().split('T')[0]}.csv`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -207,12 +250,12 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
         return;
       }
 
-      const dataStr = JSON.stringify(validConversations, null, 2);
-      const dataBlob = new Blob([dataStr], { type: 'application/json' });
-      const url = URL.createObjectURL(dataBlob);
+      const csv = conversationsToCsv(validConversations as Conversation[]);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `selected_conversations_${new Date().toISOString().split('T')[0]}.json`;
+      link.download = `selected_conversations_${new Date().toISOString().split('T')[0]}.csv`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
