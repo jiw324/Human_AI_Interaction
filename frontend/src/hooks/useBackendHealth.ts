@@ -7,7 +7,7 @@ interface HealthStatus {
 }
 
 const HEALTH_CHECK_INTERVAL = 15000; // 15 seconds
-const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const BACKEND_URL = import.meta.env.VITE_API_URL || 'https://commresearch-dev.org.ohio-state.edu';
 
 export const useBackendHealth = () => {
   const [healthStatus, setHealthStatus] = useState<HealthStatus>({

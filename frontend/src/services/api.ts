@@ -1,10 +1,12 @@
 // API Service for backend communication
-// Use localhost in development, and the real HTTPS host in production.
+// In production, default to the commresearch-dev host (or override with VITE_API_URL).
+// In development, default to the local backend on port 3001 (or override with VITE_API_URL).
 // This value is baked into the build output, so remember to rebuild before deploying.
-const API_BASE_URL =
-  import.meta.env.PROD
+export const API_BASE_URL =
+  import.meta.env.VITE_API_URL ??
+  (import.meta.env.PROD
     ? 'https://commresearch-dev.org.ohio-state.edu/api'
-    : 'http://localhost:3000/api';
+    : 'http://localhost:3001/api');
 
 // Types matching backend
 export interface Message {

@@ -3,7 +3,8 @@
  * Frontend service for LiteLLM configuration and model management
  */
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || 'https://commresearch-dev.org.ohio-state.edu/api';
 
 // Helper function for API calls
 async function fetchAPI(endpoint: string, options: RequestInit = {}): Promise<Response> {
