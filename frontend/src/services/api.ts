@@ -1,5 +1,10 @@
 // API Service for backend communication
-const API_BASE_URL = 'http://localhost:3001/api';
+// Use localhost in development, and the real HTTPS host in production.
+// This value is baked into the build output, so remember to rebuild before deploying.
+const API_BASE_URL =
+  import.meta.env.PROD
+    ? 'https://commresearch-dev.org.ohio-state.edu/api'
+    : 'http://localhost:3000/api';
 
 // Types matching backend
 export interface Message {
@@ -79,7 +84,7 @@ async function fetchAPI(
   options: RequestInit = {}
 ): Promise<Response> {
   const token = authService.getToken();
-
+  
   // Use a simple string map for headers to avoid type issues when adding Authorization
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
