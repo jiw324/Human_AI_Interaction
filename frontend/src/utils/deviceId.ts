@@ -167,7 +167,14 @@ async function saveToIndexedDB(deviceId: string): Promise<void> {
     const db = await openDB();
     const transaction = db.transaction(['deviceId'], 'readwrite');
     const store = transaction.objectStore('deviceId');
-    await store.put({ id: 1, deviceId });
+    
+    // Wrap IDBRequest in a Promise
+    await new Promise<void>((resolve, reject) => {
+      const request = store.put({ id: 1, deviceId });
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+    
     console.log('💾 Device ID backed up to IndexedDB');
   } catch (error) {
     console.warn('⚠️ Could not save to IndexedDB:', error);
@@ -183,7 +190,14 @@ async function loadFromIndexedDB(): Promise<string | null> {
     const db = await openDB();
     const transaction = db.transaction(['deviceId'], 'readonly');
     const store = transaction.objectStore('deviceId');
-    const result = await store.get(1);
+    
+    // Wrap IDBRequest in a Promise
+    const result = await new Promise<any>((resolve, reject) => {
+      const request = store.get(1);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    
     return result?.deviceId || null;
   } catch (error) {
     console.warn('⚠️ Could not load from IndexedDB:', error);
