@@ -125,7 +125,7 @@ export const authAPI = {
       console.error('Login error:', error);
       return {
         success: false,
-        message: 'Failed to connect to server. Make sure backend is running on port 3001.'
+        message: 'Failed to connect to the backend server. Please try again later or contact the administrator.'
       };
     }
   },

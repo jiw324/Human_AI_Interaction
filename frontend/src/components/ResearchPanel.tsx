@@ -244,7 +244,7 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
       maxTokens: 1000,
       systemPrompt: 'You are a helpful AI assistant. Be friendly, informative, and engaging in your responses.',
       taskPrompt: 'Please provide specific instructions or context for this task. This prompt will guide the AI in understanding your specific requirements and objectives.',
-      llamaBaseUrl: 'http://localhost:4000',
+      llamaBaseUrl: 'https://litellm.cloud.osu.edu',
       llamaServiceUrl: '',
       llamaApiKey: '',
       openaiApiKey: '',
@@ -254,7 +254,7 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
       cohereApiKey: '',
       replicateApiKey: '',
       huggingfaceApiKey: '',
-      defaultModel: 'gpt-4',
+      defaultModel: 'gpt-4o-2024-11-20',
       autoUpdateRobotList: false
     };
     

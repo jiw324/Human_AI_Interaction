@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import './ChatBox.css';
 import { chatAPI, type Message, type Conversation } from '../services/api';
 import { v4 as uuidv4 } from 'uuid';
@@ -52,9 +53,9 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
             <p style={{ margin: '0 0 20px 0', color: '#856404', fontSize: '16px', lineHeight: '1.5' }}>
               Please create a task in the Research Panel to start chatting.
             </p>
-            <a 
-              href="/research" 
-              style={{ 
+            <Link
+              to="/research"
+              style={{
                 display: 'inline-block',
                 padding: '12px 24px',
                 background: '#ffc107',
@@ -64,11 +65,11 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
                 fontWeight: '600',
                 transition: 'background 0.3s'
               }}
-              onMouseOver={(e) => e.currentTarget.style.background = '#ffb300'}
-              onMouseOut={(e) => e.currentTarget.style.background = '#ffc107'}
+              onMouseOver={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = '#ffb300' }}
+              onMouseOut={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = '#ffc107' }}
             >
               Go to Research Panel
-            </a>
+            </Link>
           </div>
         </div>
       </div>
@@ -332,7 +333,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
         // Fallback error message
         const errorMessage: Message = {
           id: uuidv4(),
-          text: 'Sorry, I could not connect to the AI service. Please make sure the backend is running on port 3001.',
+          text: 'Sorry, I could not connect to the AI service. Please check your connection or contact the site administrator.',
           sender: 'ai',
           timestamp: new Date()
         };

@@ -124,9 +124,10 @@ function App() {
       }
     });
 
-    // Save to backend database (uses unique device ID) - debounced by ChatBox
+    // Save to backend database
+    // In production, use a static admin user ID; in development, use per-device ID.
     try {
-      const userId = await getDeviceId();
+      const userId = import.meta.env.PROD ? 'admin-001' : await getDeviceId();
       await conversationsAPI.save(userId, conversation);
       // Removed console.log to reduce spam
     } catch (error) {
