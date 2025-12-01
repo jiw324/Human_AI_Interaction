@@ -9,18 +9,15 @@
 -- ============================================
 -- Run these commands as MySQL root user
 
--- Create dedicated database user
-CREATE USER IF NOT EXISTS 'hai_user'@'localhost' IDENTIFIED BY 'your_secure_password_here';
-
--- Grant privileges
-GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, INDEX, ALTER, REFERENCES 
-ON human_ai_interaction.* TO 'hai_user'@'localhost';
-
--- Grant execute privileges for stored procedures
-GRANT EXECUTE ON human_ai_interaction.* TO 'hai_user'@'localhost';
-
--- Apply changes
-FLUSH PRIVILEGES;
+-- NOTE: The following user/privilege commands require MySQL root privileges
+-- and are not allowed on shared hosting (such as OSU's MySQL). They have
+-- been removed so this file can be safely imported via phpMyAdmin.
+--
+-- CREATE USER IF NOT EXISTS 'hai_user'@'localhost' IDENTIFIED BY 'your_secure_password_here';
+-- GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, INDEX, ALTER, REFERENCES 
+--   ON human_ai_interaction.* TO 'hai_user'@'localhost';
+-- GRANT EXECUTE ON human_ai_interaction.* TO 'hai_user'@'localhost';
+-- FLUSH PRIVILEGES;
 
 -- ============================================
 -- Database Health Check Queries
@@ -61,39 +58,44 @@ AND REFERENCED_TABLE_NAME IS NOT NULL;
 -- Performance Monitoring Queries
 -- ============================================
 
+-- NOTE: The following performance-monitoring queries expect the optional
+-- view `view_user_activity` to exist. In shared hosting / partial imports
+-- this view may be missing, which causes errors when running this file.
+-- They are commented out so the config import succeeds cleanly.
+--
 -- Most active users
-SELECT 
-    user_id,
-    username,
-    task_count,
-    conversation_count,
-    message_count,
-    last_activity
-FROM view_user_activity
-ORDER BY message_count DESC
-LIMIT 10;
-
+-- SELECT 
+--     user_id,
+--     username,
+--     task_count,
+--     conversation_count,
+--     message_count,
+--     last_activity
+-- FROM view_user_activity
+-- ORDER BY message_count DESC
+-- LIMIT 10;
+--
 -- Recent conversations
-SELECT 
-    id,
-    title,
-    ai_model_name,
-    message_count,
-    last_message_at,
-    TIMESTAMPDIFF(MINUTE, last_message_at, NOW()) as minutes_ago
-FROM conversations
-ORDER BY last_message_at DESC
-LIMIT 20;
-
+-- SELECT 
+--     id,
+--     title,
+--     ai_model_name,
+--     message_count,
+--     last_message_at,
+--     TIMESTAMPDIFF(MINUTE, last_message_at, NOW()) as minutes_ago
+-- FROM conversations
+-- ORDER BY last_message_at DESC
+-- LIMIT 20;
+--
 -- Task usage statistics
-SELECT 
-    name,
-    personality,
-    COUNT(*) as usage_count
-FROM tasks t
-LEFT JOIN conversations c ON t.id = c.task_id
-GROUP BY t.id, name, personality
-ORDER BY usage_count DESC;
+-- SELECT 
+--     name,
+--     personality,
+--     COUNT(*) as usage_count
+-- FROM tasks t
+-- LEFT JOIN conversations c ON t.id = c.task_id
+-- GROUP BY t.id, name, personality
+-- ORDER BY usage_count DESC;
 
 -- ============================================
 -- Data Maintenance Queries

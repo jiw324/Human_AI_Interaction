@@ -4,9 +4,12 @@
 -- ============================================
 
 -- Drop existing database if exists and create new one
-DROP DATABASE IF EXISTS human_ai_interaction;
-CREATE DATABASE human_ai_interaction CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE human_ai_interaction;
+-- NOTE: Disabled for shared hosting (OSU MySQL does not allow DROP/CREATE DB
+-- from phpMyAdmin). Make sure you select the `human_ai_interaction` database
+-- in phpMyAdmin before importing this file.
+-- DROP DATABASE IF EXISTS human_ai_interaction;
+-- CREATE DATABASE human_ai_interaction CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+-- USE human_ai_interaction;
 
 -- ============================================
 -- Users Table
@@ -158,7 +161,7 @@ INSERT INTO tasks (
 ('task-001', 'admin-001', 'Task 1', 'analytical', 1.0, 0.7, 0.9, 0.6, 0.7, 1000, 
  'You are a helpful AI assistant. Be friendly, informative, and engaging in your responses.', 
  'Focus on analytical and logical reasoning.',
- 'https://llm-proxy.oai-at.org/', '', '', '', '', 'gpt-4', FALSE),
+ 'https://llm-proxy.oai-at.org/', '', '', '', '', 'gpt-4o-2024-11-20', FALSE),
 ('task-002', 'admin-001', 'Task 2', 'creative', 1.0, 0.9, 0.9, 0.7, 0.8, 1500, 
  'You are a creative AI assistant. Think outside the box and provide innovative solutions.', 
  'Be imaginative and explore different perspectives.',
@@ -166,11 +169,11 @@ INSERT INTO tasks (
 ('task-003', 'admin-001', 'Task 3', 'expert', 1.0, 0.5, 1.0, 0.8, 0.6, 2000, 
  'You are an expert AI assistant. Provide authoritative and detailed information.', 
  'Focus on accuracy and comprehensive explanations.',
- 'https://llm-proxy.oai-at.org/', '', '', '', '', 'gpt-4', FALSE),
+ 'https://llm-proxy.oai-at.org/', '', '', '', '', 'gpt-4o-2024-11-20', FALSE),
 ('task-004', 'admin-001', 'Task 4', 'friendly', 1.0, 0.7, 0.9, 0.6, 0.7, 1000, 
  'You are a helpful AI assistant. Be friendly, informative, and engaging in your responses.', 
  'Maintain a warm and approachable tone.',
- 'https://llm-proxy.oai-at.org/', '', '', '', '', 'Nova Pro', FALSE);
+ 'https://llm-proxy.oai-at.org/', '', '', '', '', 'nova-pro-v1', FALSE);
 
 -- ============================================
 -- Create Views for Common Queries
@@ -221,78 +224,9 @@ LEFT JOIN tasks t ON u.id = t.user_id AND t.is_active = TRUE
 GROUP BY u.id, u.username, u.email, u.last_login, u.created_at;
 
 -- ============================================
--- Stored Procedures
--- ============================================
-
-DELIMITER //
-
--- Procedure: Get user tasks with system configuration
-CREATE PROCEDURE sp_get_user_tasks(IN p_user_id VARCHAR(36))
-BEGIN
-    SELECT 
-        id,
-        name,
-        personality,
-        response_speed,
-        creativity,
-        helpfulness,
-        verbosity,
-        temperature,
-        max_tokens,
-        system_prompt,
-        task_prompt,
-        llama_base_url,
-        llama_service_url,
-        llama_api_key,
-        openai_api_key,
-        anthropic_api_key,
-        default_model,
-        auto_update_robot_list,
-        created_at,
-        updated_at
-    FROM tasks
-    WHERE user_id = p_user_id AND is_active = TRUE
-    ORDER BY created_at ASC;
-END//
-
--- Procedure: Get AI models by provider
-CREATE PROCEDURE sp_get_models_by_provider(IN p_provider VARCHAR(100))
-BEGIN
-    SELECT 
-        id,
-        name,
-        model_id,
-        provider,
-        status,
-        description,
-        max_tokens
-    FROM ai_models
-    WHERE provider = p_provider AND is_active = TRUE
-    ORDER BY name ASC;
-END//
-
-
-DELIMITER ;
-
--- ============================================
 -- Indexes for Performance Optimization
 -- ============================================
 
 -- Additional composite indexes for common queries
 CREATE INDEX idx_tasks_user_active ON tasks(user_id, is_active, created_at);
 CREATE INDEX idx_ai_models_provider_status ON ai_models(provider, status, is_active);
-
--- ============================================
--- Database Configuration
--- ============================================
-
--- Set timezone to UTC
-SET GLOBAL time_zone = '+00:00';
-
--- ============================================
--- Success Message
--- ============================================
-SELECT 'Database schema created successfully!' AS status;
-SELECT 'Tables created: users, tasks (with system config), ai_models' AS info;
-SELECT 'Views created: view_user_tasks, view_user_activity' AS views_info;
-SELECT 'Default data inserted: 1 admin user, 16 AI models, 4 tasks with configurations' AS data_status;
