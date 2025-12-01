@@ -252,12 +252,11 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
   console.log(`🔍 [ConversationHistory] After filter: ${filteredConversations.length} conversations`);
 
   const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
+    // Match ChatBox time format: HH:MM (local time)
+    return date.toLocaleTimeString([], {
       hour: '2-digit',
       minute: '2-digit'
-    }).format(date);
+    });
   };
 
   const getConversationPreview = (messages: Message[]) => {
@@ -395,7 +394,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
                   <span className="message-count">
                     {conversation.messageCount ?? conversation.messages.length} msgs
                   </span>
-                  <span className="last-activity">
+                  <span className="last-activity" title={`Created: ${conversation.createdAt.toISOString()}\nLast: ${conversation.lastMessageAt.toISOString()}`}>
                     {formatDate(conversation.createdAt)}
                   </span>
                 </div>
@@ -465,7 +464,10 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
                     </div>
                     <div className="message-text">{message.text}</div>
                     <div className="message-time">
-                      {new Date(message.timestamp).toLocaleString()}
+                      {message.timestamp.toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
                     </div>
                   </div>
                 ))

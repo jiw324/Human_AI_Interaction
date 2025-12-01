@@ -150,10 +150,23 @@ class LiteLLMService {
         messages: messages,
         temperature: temperature !== undefined ? temperature : 0.7,
         max_tokens: maxTokens || 1000,
-        top_p: topP !== undefined ? topP : 1.0,
-        presence_penalty: presencePenalty !== undefined ? presencePenalty : 0.0,
-        frequency_penalty: frequencyPenalty !== undefined ? frequencyPenalty : 0.0,
       };
+
+      // Only add OpenAI-specific parameters for GPT models
+      // Claude, Gemini, DeepSeek, Nova, Llama, Mistral don't support these
+      const modelLower = modelId.toLowerCase();
+      const isGPTModel = (
+        modelLower.startsWith('gpt-') || 
+        modelLower.startsWith('o1-') ||
+        modelLower.startsWith('o3-') ||
+        modelLower.startsWith('o4-')
+      );
+      
+      if (isGPTModel) {
+        requestData.top_p = topP !== undefined ? topP : 1.0;
+        requestData.presence_penalty = presencePenalty !== undefined ? presencePenalty : 0.0;
+        requestData.frequency_penalty = frequencyPenalty !== undefined ? frequencyPenalty : 0.0;
+      }
 
       console.log(`🤖 Using model: ${requestData.model} (temp: ${requestData.temperature})`);
       console.log(`📝 Message count: ${messages.length}`);

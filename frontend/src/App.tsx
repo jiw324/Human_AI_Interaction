@@ -218,10 +218,28 @@ function App() {
   const handleConversationsLoaded = useCallback((loadedConversations: Conversation[]) => {
     console.log(`🔄 [App.tsx] handleConversationsLoaded called with ${loadedConversations.length} conversations`);
     console.log(`📋 [App.tsx] Conversation IDs:`, loadedConversations.map(c => c.id));
-    setConversations(loadedConversations);
-    // Also save to localStorage
-    localStorage.setItem('conversations', JSON.stringify(loadedConversations));
-    console.log(`✅ State updated with ${loadedConversations.length} conversations`);
+
+    setConversations(prev => {
+      // Preserve existing createdAt from current state so History time matches ChatBox,
+      // even if backend/database timezones differ.
+      const existingById = new Map(prev.map(conv => [conv.id, conv]));
+
+      const merged = loadedConversations.map(conv => {
+        const existing = existingById.get(conv.id);
+        if (existing) {
+          return {
+            ...conv,
+            createdAt: existing.createdAt, // keep original creation time from client
+          };
+        }
+        return conv;
+      });
+
+      // Also save to localStorage
+      localStorage.setItem('conversations', JSON.stringify(merged));
+      console.log(`✅ State updated with ${merged.length} conversations`);
+      return merged;
+    });
   }, []);
 
   const handleLogin = (researchKey: string) => {
