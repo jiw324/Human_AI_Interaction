@@ -85,7 +85,7 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
     cohereApiKey: '',
     replicateApiKey: '',
     huggingfaceApiKey: '',
-    defaultModel: 'gpt-4o-2024-11-20',
+    defaultModel: 'gpt-4o-2024-11-20', // Use latest working model
     autoUpdateRobotList: false
   };
   
@@ -461,23 +461,17 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
                 className="setting-select"
               >
                 <optgroup label="🤖 OpenAI Models (OSU LiteLLM)">
-                  <option value="gpt-4o-2024-11-20">GPT-4o (Latest)</option>
+                  <option value="gpt-4o-2024-11-20">GPT-4o (Latest) ⭐ Recommended</option>
                   <option value="gpt-4o-mini-2024-07-18">GPT-4o Mini (Fast & Affordable)</option>
-                  <option value="gpt-35-turbo-0125">GPT-3.5 Turbo</option>
-                  <option value="gpt-5-2025-08-07">GPT-5 (Experimental)</option>
-                  <option value="gpt-5.1-2025-11-13">GPT-5.1 (Experimental)</option>
                   <option value="gpt-4.1-2025-04-14">GPT-4.1</option>
                   <option value="gpt-4.1-mini-2025-04-14">GPT-4.1 Mini</option>
                   <option value="gpt-4.1-nano-2025-04-14">GPT-4.1 Nano</option>
-                  <option value="o3-mini-2025-01-31">o3 Mini</option>
-                  <option value="o4-mini-2025-04-16">o4 Mini</option>
                 </optgroup>
                 <optgroup label="🧠 Anthropic Models (Claude)">
                   <option value="claude-3-5-sonnet-20240620">Claude 3.5 Sonnet</option>
                   <option value="claude-3-5-haiku-20241022">Claude 3.5 Haiku</option>
                   <option value="claude-sonnet-4-20250514">Claude 4 Sonnet</option>
                   <option value="claude-opus-4-20250514">Claude 4 Opus</option>
-                  <option value="claude-sonnet-4-20250514-thinking">Claude 4 Sonnet (Thinking)</option>
                   <option value="claude-opus-4-1-20250805">Claude 4.1 Opus</option>
                   <option value="claude-sonnet-4-5-20250929">Claude 4.5 Sonnet</option>
                 </optgroup>
@@ -488,7 +482,6 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
                 </optgroup>
                 <optgroup label="🦙 Meta Models (Llama)">
                   <option value="llama3-3-70b-instruct">Llama 3.3 70B Instruct</option>
-                  <option value="osc-llama3-2-3b">OSC Llama 3.2 3B</option>
                 </optgroup>
                 <optgroup label="📦 Other Models">
                   <option value="mistral-7b-instruct">Mistral 7B Instruct</option>

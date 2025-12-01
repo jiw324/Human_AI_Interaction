@@ -4,8 +4,9 @@ import ChatBox from './components/ChatBox'
 import ResearchPanel from './components/ResearchPanel'
 import ConversationHistory from './components/ConversationHistory'
 import LoginPage from './components/LoginPage'
-import { authService, healthAPI, tasksAPI, conversationsAPI, type Task, type Conversation, type Message, type AIModel } from './services/api'
+import { authService, tasksAPI, conversationsAPI, type Task, type Conversation, type Message, type AIModel } from './services/api'
 import { getDeviceId } from './utils/deviceId'
+import { useBackendHealth } from './hooks/useBackendHealth'
 import './App.css'
 
 interface AISettings {
@@ -26,9 +27,12 @@ function App() {
     return localStorage.getItem('researchLoggedIn') === 'true' && authService.isAuthenticated();
   });
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [tasksLoading, setTasksLoading] = useState<boolean>(true);
+  
+  // Backend health check - runs every 15 seconds
+  const healthStatus = useBackendHealth();
+  const backendStatus = healthStatus.isOnline ? 'online' : 'offline';
 
   const defaultSettings: AISettings = {
     personality: 'friendly',
@@ -69,15 +73,6 @@ function App() {
       return updated;
     });
   };
-
-  // Check backend health on mount
-  useEffect(() => {
-    const checkBackend = async () => {
-      const isOnline = await healthAPI.check();
-      setBackendStatus(isOnline ? 'online' : 'offline');
-    };
-    checkBackend();
-  }, []);
 
   // Load tasks from localStorage first, then sync with backend
   useEffect(() => {
@@ -295,9 +290,14 @@ function App() {
             Research Login
           </NavLink>
         )}
-        <div className="backend-status" title={`Backend: ${backendStatus}`}>
+        <div 
+          className="backend-status" 
+          title={`Backend: ${backendStatus}${healthStatus.lastChecked ? `\nLast checked: ${healthStatus.lastChecked.toLocaleTimeString()}` : ''}`}
+        >
           <span className={`status-dot ${backendStatus}`}></span>
-          <span className="status-text">{backendStatus === 'online' ? 'Backend Online' : backendStatus === 'offline' ? 'Backend Offline' : 'Checking...'}</span>
+          <span className="status-text">
+            {backendStatus === 'online' ? 'Backend Online' : 'Backend Offline'}
+          </span>
         </div>
       </div>
       
