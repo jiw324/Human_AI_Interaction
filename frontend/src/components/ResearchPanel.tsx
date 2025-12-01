@@ -461,8 +461,8 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
                 className="setting-select"
               >
                 <optgroup label="🤖 OpenAI Models (OSU LiteLLM)">
-                  <option value="gpt-4o-2024-11-20">GPT-4o (Latest) ⭐ Recommended</option>
-                  <option value="gpt-4o-mini-2024-07-18">GPT-4o Mini (Fast & Affordable)</option>
+                  <option value="gpt-4o-2024-11-20">GPT-4o</option>
+                  <option value="gpt-4o-mini-2024-07-18">GPT-4o Mini</option>
                   <option value="gpt-4.1-2025-04-14">GPT-4.1</option>
                   <option value="gpt-4.1-mini-2025-04-14">GPT-4.1 Mini</option>
                   <option value="gpt-4.1-nano-2025-04-14">GPT-4.1 Nano</option>

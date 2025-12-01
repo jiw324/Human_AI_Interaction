@@ -132,10 +132,15 @@ export async function getDeviceId(): Promise<string> {
     return deviceId;
   }
   
-  // Priority 3: Generate new random UUID (unique per device)
-  // Even if two devices have same fingerprint, UUIDs will be different
-  console.log('✨ First time visit - generating new unique device ID...');
-  deviceId = generateRandomDeviceId();
+  // Priority 3: Generate fingerprint-based ID (stable per device)
+  console.log('✨ First time visit - generating new fingerprint-based device ID...');
+  try {
+    deviceId = await generateDeviceFingerprint();
+  } catch (e) {
+    // Fallback: random UUID if fingerprinting fails for any reason
+    console.warn('⚠️ Fingerprint generation failed, falling back to random ID:', e);
+    deviceId = generateRandomDeviceId();
+  }
   
   // Store in both places
   localStorage.setItem(DEVICE_ID_KEY, deviceId);
