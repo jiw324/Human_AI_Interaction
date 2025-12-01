@@ -210,6 +210,20 @@ export const getConversation = async (
   }
 };
 
+// Helper: format a Date as EST (America/New_York) in MySQL DATETIME format
+const formatAsESTDateTime = (date: Date) => {
+  const estDate = new Date(
+    date.toLocaleString('en-US', { timeZone: 'America/New_York' })
+  );
+  const year = estDate.getFullYear();
+  const month = String(estDate.getMonth() + 1).padStart(2, '0');
+  const day = String(estDate.getDate()).padStart(2, '0');
+  const hour = String(estDate.getHours()).padStart(2, '0');
+  const minute = String(estDate.getMinutes()).padStart(2, '0');
+  const second = String(estDate.getSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+};
+
 export const saveConversation = async (
   req: Request<{ userId: string }, {}, Conversation>,
   res: Response,
@@ -240,8 +254,8 @@ export const saveConversation = async (
 
     if (existing) {
       // Update existing conversation
-      // Convert JavaScript Date to MySQL format
-      const lastMessageAt = new Date(conversation.lastMessageAt).toISOString().slice(0, 19).replace('T', ' ');
+      // Convert JavaScript Date to MySQL format (force EST)
+      const lastMessageAt = formatAsESTDateTime(new Date(conversation.lastMessageAt));
       
       await db.query(
         `UPDATE conversations 
@@ -251,9 +265,9 @@ export const saveConversation = async (
       );
     } else {
       // Insert new conversation
-      // Convert JavaScript Date to MySQL format (YYYY-MM-DD HH:MM:SS)
-      const createdAt = new Date(conversation.createdAt).toISOString().slice(0, 19).replace('T', ' ');
-      const lastMessageAt = new Date(conversation.lastMessageAt).toISOString().slice(0, 19).replace('T', ' ');
+      // Convert JavaScript Date to MySQL format (YYYY-MM-DD HH:MM:SS) in EST
+      const createdAt = formatAsESTDateTime(new Date(conversation.createdAt));
+      const lastMessageAt = formatAsESTDateTime(new Date(conversation.lastMessageAt));
       
       await db.query(
         `INSERT INTO conversations 
@@ -274,8 +288,8 @@ export const saveConversation = async (
 
     // Use REPLACE INTO to handle duplicates (deletes and inserts in one atomic operation)
     for (const message of conversation.messages) {
-      // Convert JavaScript Date to MySQL format
-      const timestamp = new Date(message.timestamp).toISOString().slice(0, 19).replace('T', ' ');
+      // Convert JavaScript Date to MySQL format in EST
+      const timestamp = formatAsESTDateTime(new Date(message.timestamp));
       
       await db.query(
         `REPLACE INTO messages (id, conversation_id, text, sender, timestamp) 
