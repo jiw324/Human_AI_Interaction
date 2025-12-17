@@ -39,8 +39,11 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
   const [newTaskName, setNewTaskName] = useState<string>('');
   const isAddingTask = useRef(false);
   
-  // Local editing state to prevent focus loss on text inputs
+  // Local editing state to prevent focus loss on most settings
   const [editingSettings, setEditingSettings] = useState<AISettings | null>(null);
+  // Dedicated draft state for prompts so they don't reset while typing
+  const [systemPromptDraft, setSystemPromptDraft] = useState<string>('');
+  const [taskPromptDraft, setTaskPromptDraft] = useState<string>('');
   
   // Log when tasks are received
   useEffect(() => {
@@ -90,6 +93,18 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
   };
   
   const currentSettings = editingSettings || (activeTask?.settings) || defaultSettings;
+
+  // Keep prompt drafts in sync with the active task's settings,
+  // but only when switching tasks (not on every keystroke).
+  useEffect(() => {
+    if (activeTask?.settings) {
+      setSystemPromptDraft(activeTask.settings.systemPrompt);
+      setTaskPromptDraft(activeTask.settings.taskPrompt);
+    } else {
+      setSystemPromptDraft(defaultSettings.systemPrompt);
+      setTaskPromptDraft(defaultSettings.taskPrompt);
+    }
+  }, [activeTaskId, activeTask?.settings, defaultSettings.systemPrompt, defaultSettings.taskPrompt]);
 
   const handleSettingChange = (key: keyof AISettings, value: string | number | boolean) => {
     if (!activeTask) return;
@@ -146,10 +161,13 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
       console.log('🔄 Updating system prompt to backend...', {
         taskId: activeTask.id,
         taskName: activeTask.name,
-        systemPrompt: currentSettings.systemPrompt
+        systemPrompt: systemPromptDraft
       });
       
-      const updatedTask = await tasksAPI.update(activeTask.id, undefined, currentSettings);
+      const updatedTask = await tasksAPI.update(activeTask.id, undefined, {
+        ...currentSettings,
+        systemPrompt: systemPromptDraft
+      });
       
       if (updatedTask) {
         // Update local state and localStorage
@@ -183,10 +201,13 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
       console.log('🔄 Updating task prompt to backend...', {
         taskId: activeTask.id,
         taskName: activeTask.name,
-        taskPrompt: currentSettings.taskPrompt
+        taskPrompt: taskPromptDraft
       });
       
-      const updatedTask = await tasksAPI.update(activeTask.id, undefined, currentSettings);
+      const updatedTask = await tasksAPI.update(activeTask.id, undefined, {
+        ...currentSettings,
+        taskPrompt: taskPromptDraft
+      });
       
       if (updatedTask) {
         // Update local state and localStorage
@@ -410,8 +431,8 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
             <h3 className="section-title">System Prompt</h3>
             <div className="setting-group full-width">
               <textarea
-                value={currentSettings.systemPrompt}
-                onChange={(e) => handleSettingChange('systemPrompt', e.target.value)}
+                value={systemPromptDraft}
+                onChange={(e) => setSystemPromptDraft(e.target.value)}
                 className="setting-textarea"
                 rows={6}
                 placeholder="Enter the system prompt that defines the AI's behavior..."
@@ -430,8 +451,8 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
             <h3 className="section-title">Task Prompt</h3>
             <div className="setting-group full-width">
               <textarea
-                value={currentSettings.taskPrompt || ''}
-                onChange={(e) => handleSettingChange('taskPrompt', e.target.value)}
+                value={taskPromptDraft}
+                onChange={(e) => setTaskPromptDraft(e.target.value)}
                 className="setting-textarea"
                 rows={6}
                 placeholder="Enter the specific task prompt or instructions..."
