@@ -49,9 +49,17 @@ fi
 echo -e "${GREEN}✅ MySQL connection successful${NC}"
 echo ""
 
-# Create database
-echo "📦 Creating database..."
-mysql -u"$DB_USER" -p"$DB_PASSWORD" < schema.sql
+# AI-SUGGESTION: Create/select database explicitly since schema.sql has CREATE DATABASE/USE commented out.
+echo "📦 Ensuring database exists..."
+mysql -u"$DB_USER" -p"$DB_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS human_ai_interaction CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" > /dev/null 2>&1
+if [ $? -ne 0 ]; then
+    echo -e "${RED}❌ Failed to create database human_ai_interaction${NC}"
+    exit 1
+fi
+
+# Import schema into the target database
+echo "📦 Importing schema into human_ai_interaction..."
+mysql -u"$DB_USER" -p"$DB_PASSWORD" --database=human_ai_interaction < schema.sql
 
 if [ $? -eq 0 ]; then
     echo -e "${GREEN}✅ Database created successfully!${NC}"

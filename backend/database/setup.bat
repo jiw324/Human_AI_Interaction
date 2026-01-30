@@ -8,8 +8,17 @@ echo Human AI Interaction - Database Setup
 echo ============================================
 echo.
 
+REM AI-SUGGESTION: Prefer an explicit mysql.exe path so the script works even if MySQL isn't on PATH.
+set "MYSQL_BIN=mysql.exe"
+where mysql.exe >nul 2>nul
+if %errorlevel% neq 0 (
+    if exist "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" (
+        set "MYSQL_BIN=C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe"
+    )
+)
+
 REM Check if MySQL is installed
-where mysql >nul 2>nul
+where "%MYSQL_BIN%" >nul 2>nul
 if %errorlevel% neq 0 (
     echo [ERROR] MySQL is not installed!
     echo Please install MySQL first from: https://dev.mysql.com/downloads/mysql/
@@ -29,7 +38,7 @@ echo.
 
 REM Test MySQL connection
 echo Testing MySQL connection...
-mysql -u%DB_USER% -p%DB_PASSWORD% -e "SELECT VERSION();" >nul 2>&1
+"%MYSQL_BIN%" -u%DB_USER% -p%DB_PASSWORD% -e "SELECT VERSION();" >nul 2>&1
 if %errorlevel% neq 0 (
     echo [ERROR] Failed to connect to MySQL!
     echo Please check your credentials and try again.
@@ -40,9 +49,18 @@ if %errorlevel% neq 0 (
 echo [OK] MySQL connection successful
 echo.
 
-REM Create database
-echo Creating database...
-mysql -u%DB_USER% -p%DB_PASSWORD% < schema.sql
+REM AI-SUGGESTION: Create/select database explicitly since schema.sql has CREATE DATABASE/USE commented out.
+echo Ensuring database exists...
+"%MYSQL_BIN%" -u%DB_USER% -p%DB_PASSWORD% -e "CREATE DATABASE IF NOT EXISTS human_ai_interaction CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [ERROR] Failed to create database human_ai_interaction
+    pause
+    exit /b 1
+)
+
+REM Import schema into the target database
+echo Importing schema into human_ai_interaction...
+"%MYSQL_BIN%" -u%DB_USER% -p%DB_PASSWORD% --database=human_ai_interaction < schema.sql
 if %errorlevel% equ 0 (
     echo [OK] Database created successfully!
 ) else (
@@ -65,7 +83,7 @@ if /i "%CREATE_USER%"=="y" (
     echo GRANT ALL PRIVILEGES ON human_ai_interaction.* TO '%NEW_USER%'@'localhost'; >> temp_user.sql
     echo FLUSH PRIVILEGES; >> temp_user.sql
     
-    mysql -u%DB_USER% -p%DB_PASSWORD% < temp_user.sql
+    "%MYSQL_BIN%" -u%DB_USER% -p%DB_PASSWORD% < temp_user.sql
     del temp_user.sql
     
     echo [OK] Database user created

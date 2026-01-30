@@ -58,6 +58,11 @@ mysql -u root -p < backend/database/schema.sql
 3. Open `schema.sql` file
 4. Execute the script (Lightning bolt icon)
 
+**Option C: One-command setup (Windows/macOS/Linux)**
+- Windows: run `backend/database/setup.bat`
+- macOS/Linux: run `backend/database/setup.sh`
+- See `backend/database/WORKBENCH_SETUP.md` for a quick walkthrough.
+
 #### 3. Configure Database User (Production)
 
 ```bash
