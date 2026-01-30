@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { API_BASE_URL } from '../services/api';
 
 interface HealthStatus {
   isOnline: boolean;
@@ -6,8 +7,9 @@ interface HealthStatus {
   error: string | null;
 }
 
-const HEALTH_CHECK_INTERVAL = 15000; // 15 seconds
-const BACKEND_URL = import.meta.env.VITE_API_URL || 'https://commresearch-dev.org.ohio-state.edu';
+const HEALTH_CHECK_DEBOUNCE_MS = 60000; // 60 seconds
+// AI-SUGGESTION: Use the same API base as the rest of the frontend to avoid
+// mismatches like VITE_API_URL=".../api" causing "/api/api/health".
 
 export const useBackendHealth = () => {
   const [healthStatus, setHealthStatus] = useState<HealthStatus>({
@@ -16,12 +18,16 @@ export const useBackendHealth = () => {
     error: null
   });
 
+  // AI-SUGGESTION: Debounced scheduler — any user interaction resets the countdown.
+  // The health check runs 60s after the last detected activity.
+  const scheduledTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const checkHealth = useCallback(async () => {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
-      const response = await fetch(`${BACKEND_URL}/api/health`, {
+      const response = await fetch(`${API_BASE_URL}/health`, {
         method: 'GET',
         signal: controller.signal
       });
@@ -56,15 +62,45 @@ export const useBackendHealth = () => {
   }, []);
 
   useEffect(() => {
-    // Check immediately on mount
+    const scheduleDebouncedHealthCheck = () => {
+      if (scheduledTimeoutRef.current) {
+        clearTimeout(scheduledTimeoutRef.current);
+      }
+      scheduledTimeoutRef.current = setTimeout(() => {
+        checkHealth();
+      }, HEALTH_CHECK_DEBOUNCE_MS);
+    };
+
+    // AI-SUGGESTION: Keep the initial quick check so the UI can show status without waiting 60s.
     checkHealth();
+    scheduleDebouncedHealthCheck();
 
-    // Set up interval to check every 15 seconds
-    const intervalId = setInterval(checkHealth, HEALTH_CHECK_INTERVAL);
+    // AI-SUGGESTION: Reset the countdown on user activity.
+    const activityEvents: Array<keyof WindowEventMap> = [
+      'click',
+      'keydown',
+      'mousedown',
+      'mousemove',
+      'scroll',
+      'touchstart',
+    ];
 
-    // Cleanup on unmount
+    const onUserActivity = () => {
+      scheduleDebouncedHealthCheck();
+    };
+
+    for (const evt of activityEvents) {
+      window.addEventListener(evt, onUserActivity, { passive: true });
+    }
+
+    // Cleanup on unmount / StrictMode re-mount
     return () => {
-      clearInterval(intervalId);
+      if (scheduledTimeoutRef.current) {
+        clearTimeout(scheduledTimeoutRef.current);
+      }
+      for (const evt of activityEvents) {
+        window.removeEventListener(evt, onUserActivity);
+      }
     };
   }, [checkHealth]);
 

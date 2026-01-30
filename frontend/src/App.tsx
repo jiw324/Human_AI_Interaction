@@ -18,7 +18,8 @@ function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [tasksLoading, setTasksLoading] = useState<boolean>(true);
   
-  // Backend health check - runs every 15 seconds
+  // AI-SUGGESTION: Backend health check is debounced:
+  // runs on mount, then 60s after the user's last interaction.
   const healthStatus = useBackendHealth();
   const backendStatus = healthStatus.isOnline ? 'online' : 'offline';
 

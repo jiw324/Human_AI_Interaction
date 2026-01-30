@@ -70,6 +70,20 @@ CREATE TABLE tasks (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
+-- System Configs Table (Key/Value Store)
+-- ============================================
+-- AI-SUGGESTION: Required by backend config service. Kept separate from per-task settings.
+CREATE TABLE IF NOT EXISTS configs (
+    config_id INT AUTO_INCREMENT PRIMARY KEY,
+    `key` VARCHAR(255) NOT NULL UNIQUE,
+    value TEXT NULL,
+    description TEXT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_key (`key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
 -- Conversations Table (Hard deletes only)
 -- ============================================
 CREATE TABLE conversations (
