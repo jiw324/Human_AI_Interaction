@@ -361,7 +361,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
         </div>
         <div className="chat-title">
           <h3>{selectedModel.name}</h3>
-          <span className="status">Online • {selectedModel.personality}</span>
         </div>
       </div>
       

@@ -464,9 +464,6 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
                   <h3>{selectedConversation.title}</h3>
                   <p className="modal-subtitle">
                     {selectedConversation.aiModel.name}
-                    {selectedConversation.aiModel.personality
-                      ? ` • ${selectedConversation.aiModel.personality}`
-                      : ''}
                   </p>
                 </div>
               </div>
