@@ -8,10 +8,31 @@ import { ConfigRow, ConfigUpdateDTO, LiteLLMConfig } from '../types/config.types
 import { ResultSetHeader } from 'mysql2';
 
 class ConfigService {
+  // AI-SUGGESTION: Self-heal missing schema by ensuring the required table exists.
+  // This prevents startup failures when the database was initialized with an older schema.sql.
+  private async ensureConfigsTableExists(): Promise<void> {
+    const sql = `
+      CREATE TABLE IF NOT EXISTS configs (
+        config_id INT AUTO_INCREMENT PRIMARY KEY,
+        \`key\` VARCHAR(255) NOT NULL UNIQUE,
+        value TEXT NULL,
+        description TEXT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_key (\`key\`)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `;
+
+    await query(sql);
+  }
+
   /**
    * Ensure basic configuration exists on service initialization
    */
   async ensureBasicConfigExists(): Promise<void> {
+    // AI-SUGGESTION: Ensure schema exists before reading/writing configs.
+    await this.ensureConfigsTableExists();
+
     const basicConfigs: ConfigUpdateDTO[] = [
       {
         key: 'LITELLM_API_BASE',

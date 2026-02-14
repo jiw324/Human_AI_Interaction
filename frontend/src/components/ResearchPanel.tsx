@@ -55,17 +55,6 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
   // Dedicated draft state for prompts so they don't reset while typing
   const [systemPromptDraft, setSystemPromptDraft] = useState<string>('');
   const [taskPromptDraft, setTaskPromptDraft] = useState<string>('');
-
-  // AI-SUGGESTION: Keep per-task prompt drafts so switching tasks doesn't wipe unsaved edits.
-  const [promptDraftsByTaskId, setPromptDraftsByTaskId] = useState<PromptDraftMap>({});
-  const [promptDraftsLoaded, setPromptDraftsLoaded] = useState(false);
-
-  // AI-SUGGESTION: Explicit edit modes for the prompt boxes (so users can exit without refreshing).
-  const [isEditingSystemPrompt, setIsEditingSystemPrompt] = useState(false);
-  const [isEditingTaskPrompt, setIsEditingTaskPrompt] = useState(false);
-
-  const systemPromptRef = useRef<HTMLTextAreaElement | null>(null);
-  const taskPromptRef = useRef<HTMLTextAreaElement | null>(null);
   
   // Log when tasks are received
   useEffect(() => {
@@ -116,74 +105,21 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
   
   const currentSettings = editingSettings || (activeTask?.settings) || defaultSettings;
 
-  // AI-SUGGESTION: Load drafts from localStorage once.
+  // AI-SUGGESTION: Persist prompt drafts per-task so refreshes (or background updates) don't wipe in-progress edits.
+  const getSystemPromptDraftStorageKey = (taskId: string) => `research_prompt_draft:${taskId}:system`;
+  const getTaskPromptDraftStorageKey = (taskId: string) => `research_prompt_draft:${taskId}:task`;
+
+  // Keep prompt drafts in sync with the active task's settings,
+  // but only when switching tasks (not on every keystroke).
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(PROMPT_DRAFTS_STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as PromptDraftMap;
-        if (parsed && typeof parsed === 'object') {
-          setPromptDraftsByTaskId(parsed);
-        }
-      }
-    } catch (error) {
-      console.warn('⚠️ Failed to load prompt drafts from localStorage:', error);
-    } finally {
-      setPromptDraftsLoaded(true);
+    if (activeTask?.settings) {
+      setSystemPromptDraft(activeTask.settings.systemPrompt);
+      setTaskPromptDraft(activeTask.settings.taskPrompt);
+    } else {
+      setSystemPromptDraft(defaultSettings.systemPrompt);
+      setTaskPromptDraft(defaultSettings.taskPrompt);
     }
-  }, []);
-
-  // AI-SUGGESTION: Persist drafts so refresh doesn't wipe unsaved prompts.
-  useEffect(() => {
-    if (!promptDraftsLoaded) return;
-    try {
-      localStorage.setItem(PROMPT_DRAFTS_STORAGE_KEY, JSON.stringify(promptDraftsByTaskId));
-    } catch (error) {
-      console.warn('⚠️ Failed to persist prompt drafts to localStorage:', error);
-    }
-  }, [promptDraftsLoaded, promptDraftsByTaskId]);
-
-  const savedSystemPrompt = activeTask?.settings?.systemPrompt ?? defaultSettings.systemPrompt;
-  const savedTaskPrompt = activeTask?.settings?.taskPrompt ?? defaultSettings.taskPrompt;
-
-  // Keep prompt drafts in sync with the active task, but prefer any saved local draft for that task.
-  // Only run when switching tasks (not on every keystroke).
-  useEffect(() => {
-    if (!promptDraftsLoaded) return;
-
-    const existingDraft = activeTaskId ? promptDraftsByTaskId[activeTaskId] : undefined;
-    setSystemPromptDraft(existingDraft?.systemPrompt ?? savedSystemPrompt);
-    setTaskPromptDraft(existingDraft?.taskPrompt ?? savedTaskPrompt);
-
-    // Exit edit mode on task switch for a predictable UX.
-    setIsEditingSystemPrompt(false);
-    setIsEditingTaskPrompt(false);
-  }, [activeTaskId, promptDraftsLoaded]); // intentionally NOT depending on promptDraftsByTaskId to avoid cursor jumps while typing
-
-  const upsertPromptDraftForActiveTask = (next: { systemPrompt?: string; taskPrompt?: string }) => {
-    if (!activeTaskId) return;
-    setPromptDraftsByTaskId((prev) => {
-      const existing = prev[activeTaskId];
-      const merged: PromptDraft = {
-        systemPrompt: next.systemPrompt ?? existing?.systemPrompt ?? systemPromptDraft,
-        taskPrompt: next.taskPrompt ?? existing?.taskPrompt ?? taskPromptDraft,
-        updatedAt: Date.now(),
-      };
-      return { ...prev, [activeTaskId]: merged };
-    });
-  };
-
-  const clearPromptDraftForActiveTask = () => {
-    if (!activeTaskId) return;
-    setPromptDraftsByTaskId((prev) => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { [activeTaskId]: _removed, ...rest } = prev;
-      return rest;
-    });
-  };
-
-  const isSystemPromptDirty = systemPromptDraft !== savedSystemPrompt;
-  const isTaskPromptDirty = taskPromptDraft !== savedTaskPrompt;
+  }, [activeTaskId, activeTask?.settings, defaultSettings.systemPrompt, defaultSettings.taskPrompt]);
 
   const handleSettingChange = (key: keyof AISettings, value: string | number | boolean) => {
     if (!activeTask) return;
@@ -265,6 +201,10 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
         // Explicitly save to localStorage
         localStorage.setItem('research_tasks', JSON.stringify(updatedTasks));
         console.log('💾 System prompt updated in localStorage');
+
+        // AI-SUGGESTION: Clear saved draft after successful save so future refreshes show the saved value.
+        localStorage.removeItem(getSystemPromptDraftStorageKey(activeTaskId));
+        setIsSystemPromptDirty(false);
         
         alert('✅ System Prompt updated successfully!');
       }
@@ -309,6 +249,10 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
         // Explicitly save to localStorage
         localStorage.setItem('research_tasks', JSON.stringify(updatedTasks));
         console.log('💾 Task prompt updated in localStorage');
+
+        // AI-SUGGESTION: Clear saved draft after successful save so future refreshes show the saved value.
+        localStorage.removeItem(getTaskPromptDraftStorageKey(activeTaskId));
+        setIsTaskPromptDirty(false);
         
         alert('✅ Task Prompt updated successfully!');
       }
@@ -408,6 +352,10 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
         const success = await tasksAPI.delete(taskId);
         
         if (success) {
+          // AI-SUGGESTION: Remove any persisted drafts for the deleted task to avoid stale data.
+          localStorage.removeItem(getSystemPromptDraftStorageKey(taskId));
+          localStorage.removeItem(getTaskPromptDraftStorageKey(taskId));
+
           const newTasks = tasks.filter(t => t.id !== taskId);
           onTasksChange(newTasks);
           
@@ -551,20 +499,8 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
               <textarea
                 ref={systemPromptRef}
                 value={systemPromptDraft}
-                readOnly={!isEditingSystemPrompt}
-                onClick={() => {
-                  if (!isEditingSystemPrompt) setIsEditingSystemPrompt(true);
-                }}
-                onBlur={() => {
-                  // AI-SUGGESTION: Exit edit mode when focus leaves the textarea (draft is preserved).
-                  setIsEditingSystemPrompt(false);
-                }}
-                onChange={(e) => {
-                  const next = e.target.value;
-                  setSystemPromptDraft(next);
-                  upsertPromptDraftForActiveTask({ systemPrompt: next, taskPrompt: taskPromptDraft });
-                }}
-                className={`setting-textarea ${!isEditingSystemPrompt ? 'prompt-readonly' : ''}`}
+                onChange={(e) => setSystemPromptDraft(e.target.value)}
+                className="setting-textarea"
                 rows={6}
                 placeholder="Enter the system prompt that defines the AI's behavior..."
               />
@@ -616,20 +552,8 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
               <textarea
                 ref={taskPromptRef}
                 value={taskPromptDraft}
-                readOnly={!isEditingTaskPrompt}
-                onClick={() => {
-                  if (!isEditingTaskPrompt) setIsEditingTaskPrompt(true);
-                }}
-                onBlur={() => {
-                  // AI-SUGGESTION: Exit edit mode when focus leaves the textarea (draft is preserved).
-                  setIsEditingTaskPrompt(false);
-                }}
-                onChange={(e) => {
-                  const next = e.target.value;
-                  setTaskPromptDraft(next);
-                  upsertPromptDraftForActiveTask({ taskPrompt: next, systemPrompt: systemPromptDraft });
-                }}
-                className={`setting-textarea ${!isEditingTaskPrompt ? 'prompt-readonly' : ''}`}
+                onChange={(e) => setTaskPromptDraft(e.target.value)}
+                className="setting-textarea"
                 rows={6}
                 placeholder="Enter the specific task prompt or instructions..."
               />
