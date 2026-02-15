@@ -22,14 +22,13 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 app.use(helmet()); // Security headers
 
-// CORS - Allow all localhost origins in development
-// and the commresearch-dev host in production (for the deployed frontend).
-const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
+// CORS - In development, localhost is always allowed.
+// In production, set ALLOWED_ORIGINS in the environment (comma-separated).
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').map(o => o.trim()) || [
   'http://localhost:3000',
   'http://localhost:5173',
   'http://127.0.0.1:3000',
   'http://127.0.0.1:5173',
-  'https://commresearch-dev.org.ohio-state.edu'
 ];
 
 app.use(cors({

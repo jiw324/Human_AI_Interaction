@@ -211,13 +211,6 @@ function App() {
     navigate('/');
   };
 
-  // Protected route component
-  const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-    if (!isLoggedIn) {
-      return <Navigate to="/login" replace />;
-    }
-    return <>{children}</>;
-  };
 
   return (
     <div className="app">
@@ -297,29 +290,23 @@ function App() {
               />
             } 
           />
-          <Route 
-            path="/research" 
+          <Route
+            path="/research"
             element={
-              <ProtectedRoute>
+              !isLoggedIn ? <Navigate to="/login" replace /> : (
                 <div className="research-section">
-                  {tasksLoading ? (
-                    <div style={{ padding: '40px', textAlign: 'center' }}>
-                      <p>Loading tasks...</p>
-                    </div>
-                  ) : (
-                    <ResearchPanel 
-                      tasks={tasks}
-                      onTasksChange={setTasks}
-                    />
-                  )}
+                  <ResearchPanel
+                    tasks={tasks}
+                    onTasksChange={setTasks}
+                  />
                 </div>
-              </ProtectedRoute>
-            } 
+              )
+            }
           />
-          <Route 
-            path="/history" 
+          <Route
+            path="/history"
             element={
-              <ProtectedRoute>
+              !isLoggedIn ? <Navigate to="/login" replace /> : (
                 <div className="history-section">
                   <ConversationHistory
                     conversations={conversations}
@@ -327,8 +314,8 @@ function App() {
                     onConversationsLoaded={handleConversationsLoaded}
                   />
                 </div>
-              </ProtectedRoute>
-            } 
+              )
+            }
           />
         </Routes>
       </div>

@@ -55,6 +55,10 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
   // Dedicated draft state for prompts so they don't reset while typing
   const [systemPromptDraft, setSystemPromptDraft] = useState<string>('');
   const [taskPromptDraft, setTaskPromptDraft] = useState<string>('');
+  const [isEditingSystemPrompt, setIsEditingSystemPrompt] = useState(false);
+  const [isEditingTaskPrompt, setIsEditingTaskPrompt] = useState(false);
+  const systemPromptRef = useRef<HTMLTextAreaElement>(null);
+  const taskPromptRef = useRef<HTMLTextAreaElement>(null);
   
   // Log when tasks are received
   useEffect(() => {
@@ -105,9 +109,28 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
   
   const currentSettings = editingSettings || (activeTask?.settings) || defaultSettings;
 
+  const savedSystemPrompt = activeTask?.settings?.systemPrompt ?? defaultSettings.systemPrompt;
+  const savedTaskPrompt = activeTask?.settings?.taskPrompt ?? defaultSettings.taskPrompt;
+  const isSystemPromptDirty = systemPromptDraft !== savedSystemPrompt;
+  const isTaskPromptDirty = taskPromptDraft !== savedTaskPrompt;
+
   // AI-SUGGESTION: Persist prompt drafts per-task so refreshes (or background updates) don't wipe in-progress edits.
   const getSystemPromptDraftStorageKey = (taskId: string) => `research_prompt_draft:${taskId}:system`;
   const getTaskPromptDraftStorageKey = (taskId: string) => `research_prompt_draft:${taskId}:task`;
+
+  const clearPromptDraftForActiveTask = () => {
+    localStorage.removeItem(getSystemPromptDraftStorageKey(activeTaskId));
+    localStorage.removeItem(getTaskPromptDraftStorageKey(activeTaskId));
+  };
+
+  const upsertPromptDraftForActiveTask = (draft: Partial<{ systemPrompt: string; taskPrompt: string }>) => {
+    if (draft.systemPrompt !== undefined) {
+      localStorage.setItem(getSystemPromptDraftStorageKey(activeTaskId), draft.systemPrompt);
+    }
+    if (draft.taskPrompt !== undefined) {
+      localStorage.setItem(getTaskPromptDraftStorageKey(activeTaskId), draft.taskPrompt);
+    }
+  };
 
   // Keep prompt drafts in sync with the active task's settings,
   // but only when switching tasks (not on every keystroke).
@@ -119,7 +142,8 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
       setSystemPromptDraft(defaultSettings.systemPrompt);
       setTaskPromptDraft(defaultSettings.taskPrompt);
     }
-  }, [activeTaskId, activeTask?.settings, defaultSettings.systemPrompt, defaultSettings.taskPrompt]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTaskId]);
 
   const handleSettingChange = (key: keyof AISettings, value: string | number | boolean) => {
     if (!activeTask) return;
@@ -204,7 +228,6 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
 
         // AI-SUGGESTION: Clear saved draft after successful save so future refreshes show the saved value.
         localStorage.removeItem(getSystemPromptDraftStorageKey(activeTaskId));
-        setIsSystemPromptDirty(false);
         
         alert('✅ System Prompt updated successfully!');
       }
@@ -252,7 +275,6 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
 
         // AI-SUGGESTION: Clear saved draft after successful save so future refreshes show the saved value.
         localStorage.removeItem(getTaskPromptDraftStorageKey(activeTaskId));
-        setIsTaskPromptDirty(false);
         
         alert('✅ Task Prompt updated successfully!');
       }
@@ -464,37 +486,6 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
           <div className="prompts-container">
           <div className="config-section prompt-section">
             <h3 className="section-title">System Prompt</h3>
-            <div className="prompt-actions">
-              <span className={`prompt-status ${isSystemPromptDirty ? 'dirty' : ''}`}>
-                {isSystemPromptDirty ? 'Unsaved changes (draft)' : 'Saved'}
-              </span>
-              <div className="prompt-actions-buttons">
-                <button
-                  type="button"
-                  className="btn-prompt-secondary"
-                  onClick={() => {
-                    setIsEditingSystemPrompt(true);
-                    requestAnimationFrame(() => systemPromptRef.current?.focus());
-                  }}
-                >
-                  ✏️ Edit
-                </button>
-                <button
-                  type="button"
-                  className="btn-prompt-danger"
-                  onClick={() => {
-                    setSystemPromptDraft(savedSystemPrompt);
-                    upsertPromptDraftForActiveTask({ systemPrompt: savedSystemPrompt });
-                    clearPromptDraftForActiveTask();
-                    setIsEditingSystemPrompt(false);
-                  }}
-                  disabled={!isSystemPromptDirty}
-                  title="Discard unsaved edits and revert to the saved value"
-                >
-                  ↩ Discard
-                </button>
-              </div>
-            </div>
             <div className="setting-group full-width">
               <textarea
                 ref={systemPromptRef}
@@ -509,7 +500,6 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
               type="button"
               className="btn-update-prompt"
               onClick={handleUpdateSystemPrompt}
-              disabled={!isSystemPromptDirty}
             >
               💾 Update System Prompt
             </button>
@@ -517,37 +507,6 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
 
           <div className="config-section prompt-section">
             <h3 className="section-title">Task Prompt</h3>
-            <div className="prompt-actions">
-              <span className={`prompt-status ${isTaskPromptDirty ? 'dirty' : ''}`}>
-                {isTaskPromptDirty ? 'Unsaved changes (draft)' : 'Saved'}
-              </span>
-              <div className="prompt-actions-buttons">
-                <button
-                  type="button"
-                  className="btn-prompt-secondary"
-                  onClick={() => {
-                    setIsEditingTaskPrompt(true);
-                    requestAnimationFrame(() => taskPromptRef.current?.focus());
-                  }}
-                >
-                  ✏️ Edit
-                </button>
-                <button
-                  type="button"
-                  className="btn-prompt-danger"
-                  onClick={() => {
-                    setTaskPromptDraft(savedTaskPrompt);
-                    upsertPromptDraftForActiveTask({ taskPrompt: savedTaskPrompt });
-                    clearPromptDraftForActiveTask();
-                    setIsEditingTaskPrompt(false);
-                  }}
-                  disabled={!isTaskPromptDirty}
-                  title="Discard unsaved edits and revert to the saved value"
-                >
-                  ↩ Discard
-                </button>
-              </div>
-            </div>
             <div className="setting-group full-width">
               <textarea
                 ref={taskPromptRef}
@@ -562,7 +521,6 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
               type="button"
               className="btn-update-prompt"
               onClick={handleUpdateTaskPrompt}
-              disabled={!isTaskPromptDirty}
             >
               💾 Update Task Prompt
             </button>

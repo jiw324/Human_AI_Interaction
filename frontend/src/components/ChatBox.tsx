@@ -91,17 +91,15 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
     if (tasks.length > 0) {
       const randomIndex = Math.floor(Math.random() * tasks.length);
       const randomTask = tasks[randomIndex];
-      const icons = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
-      
       console.log(`🎲 First visit - randomly selected task: ${randomTask.name} (${randomIndex + 1}/${tasks.length})`);
-      
+
       // Task Prompt is displayed as the initial greeting message to the user
       // System Prompt is sent to the AI backend to control HOW it responds
       return {
         name: randomTask.name,
         greeting: randomTask.settings.taskPrompt || `Hello! You are chatting with ${randomTask.name}. How can I help you today?`,
         personality: randomTask.settings.personality,
-        icon: icons[randomIndex] || '💬'
+        icon: '🤖'
       };
     }
     // Fallback if no tasks (should not reach here due to early return)
@@ -109,7 +107,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
       name: 'No Tasks',
       greeting: '',
       personality: 'friendly',
-      icon: '⚠️'
+      icon: '🤖'
     };
   });
 
@@ -360,7 +358,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
           <div className="avatar-icon">{selectedModel.icon}</div>
         </div>
         <div className="chat-title">
-          <h3>{selectedModel.name}</h3>
+          <h3>AI companion</h3>
         </div>
       </div>
       
