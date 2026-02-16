@@ -351,12 +351,13 @@ export const updateTask = async (req: Request, res: Response): Promise<void> => 
       return;
     }
     
-    // Add task ID to values
+    // Add task ID and user ID to the WHERE clause values
     values.push(id);
-    
+    values.push(userId);
+
     // Execute update
     await db.query(
-      `UPDATE tasks SET ${updates.join(', ')} WHERE id = ?`,
+      `UPDATE tasks SET ${updates.join(', ')} WHERE id = ? AND user_id = ?`,
       values
     );
     
@@ -502,8 +503,8 @@ export const deleteTask = async (req: Request, res: Response): Promise<void> => 
     
     // Hard delete (permanently remove from database)
     await db.query(
-      `DELETE FROM tasks WHERE id = ?`,
-      [id]
+      `DELETE FROM tasks WHERE id = ? AND user_id = ?`,
+      [id, userId]
     );
     
     console.log('✅ [Backend] Task permanently deleted from database:', task.name);

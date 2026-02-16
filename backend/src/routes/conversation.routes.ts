@@ -5,36 +5,22 @@ import {
   saveConversation,
   deleteConversation
 } from '../controllers/conversation.controller';
+import { authenticate } from '../middleware/auth.middleware';
 
 const router = Router();
 
-/**
- * GET /api/conversations/:userId
- * Get all conversations for a user
- * NOTE: No authentication required - allows loading chats without login
- */
-router.get('/:userId', getConversations);
+// GET /api/conversations/:userId — researcher views their own history (requires auth)
+router.get('/:userId', authenticate, getConversations);
 
-/**
- * GET /api/conversations/:userId/:conversationId
- * Get a specific conversation
- * NOTE: No authentication required - allows loading chats without login
- */
-router.get('/:userId/:conversationId', getConversation);
+// GET /api/conversations/:userId/:conversationId — researcher fetches full convo (requires auth)
+router.get('/:userId/:conversationId', authenticate, getConversation);
 
-/**
- * POST /api/conversations/:userId
- * Save a conversation
- * NOTE: No authentication required - allows saving chats without login
- */
+// POST /api/conversations/:userId — save a conversation
+// No auth: participants save under the researcher's UUID without holding a JWT
 router.post('/:userId', saveConversation);
 
-/**
- * DELETE /api/conversations/:userId/:conversationId
- * Delete a conversation
- * NOTE: No authentication required - allows deleting chats without login
- */
-router.delete('/:userId/:conversationId', deleteConversation);
+// DELETE /api/conversations/:userId/:conversationId — researcher deletes a convo (requires auth)
+router.delete('/:userId/:conversationId', authenticate, deleteConversation);
 
 export default router;
 

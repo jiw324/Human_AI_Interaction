@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
+import { v4 as uuidv4 } from 'uuid';
 import db from '../config/database';
 import { configService } from '../services/config.service';
 
@@ -161,5 +163,99 @@ export const getConversationMessages = async (req: Request, res: Response): Prom
   } catch (error) {
     console.error('❌ [Admin] Error fetching messages:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch messages' });
+  }
+};
+
+/**
+ * Create a new researcher (user)
+ */
+export const createUser = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { username, email, researchKey } = req.body;
+
+    if (!username || !email || !researchKey) {
+      res.status(400).json({ success: false, message: 'username, email, and researchKey are required' });
+      return;
+    }
+
+    const existing = await db.queryOne(
+      'SELECT id FROM users WHERE email = ? OR research_key = ?',
+      [email, researchKey]
+    );
+    if (existing) {
+      res.status(409).json({ success: false, message: 'Email or research key already exists' });
+      return;
+    }
+
+    const id = uuidv4();
+    // Researchers authenticate with their research key, not a password.
+    // Store an empty hash so the column constraint is satisfied.
+    const passwordHash = await bcrypt.hash(id, 10);
+
+    await db.query(
+      'INSERT INTO users (id, username, email, password_hash, research_key, is_active) VALUES (?, ?, ?, ?, ?, TRUE)',
+      [id, username, email, passwordHash, researchKey]
+    );
+
+    console.log(`✅ [Admin] Created researcher: ${username} (${email})`);
+    res.status(201).json({
+      success: true,
+      data: { id, username, email, researchKey, isActive: true }
+    });
+  } catch (error) {
+    console.error('❌ [Admin] Error creating user:', error);
+    res.status(500).json({ success: false, message: 'Failed to create researcher' });
+  }
+};
+
+/**
+ * Delete a researcher and all their data
+ */
+export const deleteUser = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { userId } = req.params;
+
+    const user = await db.queryOne('SELECT id, username FROM users WHERE id = ?', [userId]);
+    if (!user) {
+      res.status(404).json({ success: false, message: 'Researcher not found' });
+      return;
+    }
+
+    await db.query('DELETE FROM users WHERE id = ?', [userId]);
+
+    console.log(`✅ [Admin] Deleted researcher: ${user.username} (${userId})`);
+    res.json({ success: true, message: 'Researcher deleted successfully' });
+  } catch (error) {
+    console.error('❌ [Admin] Error deleting user:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete researcher' });
+  }
+};
+
+/**
+ * Toggle a researcher's active status
+ */
+export const toggleUserStatus = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { userId } = req.params;
+    const { isActive } = req.body;
+
+    if (typeof isActive !== 'boolean') {
+      res.status(400).json({ success: false, message: 'isActive (boolean) is required' });
+      return;
+    }
+
+    const user = await db.queryOne('SELECT id FROM users WHERE id = ?', [userId]);
+    if (!user) {
+      res.status(404).json({ success: false, message: 'Researcher not found' });
+      return;
+    }
+
+    await db.query('UPDATE users SET is_active = ? WHERE id = ?', [isActive ? 1 : 0, userId]);
+
+    console.log(`✅ [Admin] Set researcher ${userId} active=${isActive}`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ [Admin] Error toggling user status:', error);
+    res.status(500).json({ success: false, message: 'Failed to update researcher status' });
   }
 };

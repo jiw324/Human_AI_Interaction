@@ -36,10 +36,9 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
     try {
       // If logged in as admin, fetch ALL conversations
       // Otherwise, fetch only device-specific conversations
-      const isLoggedIn = authService.isAuthenticated();
-      const userId = isLoggedIn ? 'admin-001' : await getDeviceId();
+      const userId = authService.getUserId() ?? await getDeviceId();
       
-      console.log('📡 Loading conversations from database for:', isLoggedIn ? 'ADMIN (all conversations)' : `device ${userId}`);
+      console.log('📡 Loading conversations from database for:', userId);
       const dbConversations = await conversationsAPI.getAll(userId);
       
       console.log('📦 [Frontend] Received from API:', dbConversations);
@@ -74,8 +73,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
     if (conversation.messages.length <= 1) {
       setIsLoadingMessages(true);
       try {
-        const isLoggedIn = authService.isAuthenticated();
-        const userId = isLoggedIn ? 'admin-001' : await getDeviceId();
+        const userId = authService.getUserId() ?? await getDeviceId();
         const fullConversation = await conversationsAPI.getOne(userId, conversation.id);
         
         if (fullConversation) {
@@ -140,8 +138,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
   const exportConversation = async (conversation: Conversation) => {
     try {
       // Fetch full conversation with all messages from database
-      const isLoggedIn = authService.isAuthenticated();
-      const userId = isLoggedIn ? 'admin-001' : await getDeviceId();
+      const userId = authService.getUserId() ?? await getDeviceId();
       const fullConversation = await conversationsAPI.getOne(userId, conversation.id);
       
       if (!fullConversation) {
@@ -168,8 +165,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
   const exportAllConversations = async (conversationsToExport: Conversation[]) => {
     try {
       // Fetch all filtered conversations with full messages from database
-      const isLoggedIn = authService.isAuthenticated();
-      const userId = isLoggedIn ? 'admin-001' : await getDeviceId();
+      const userId = authService.getUserId() ?? await getDeviceId();
       const fullConversations = await Promise.all(
         conversationsToExport.map(conv => conversationsAPI.getOne(userId, conv.id))
       );
@@ -231,8 +227,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
     }
 
     try {
-      const isLoggedIn = authService.isAuthenticated();
-      const userId = isLoggedIn ? 'admin-001' : await getDeviceId();
+      const userId = authService.getUserId() ?? await getDeviceId();
       
       // Get selected conversations
       const selectedConvs = conversations.filter(c => selectedIds.has(c.id));

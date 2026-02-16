@@ -26,59 +26,58 @@ interface Task {
 interface ChatBoxProps {
   tasks: Task[];
   onSaveConversation: (conversation: Conversation) => void;
+  studyId: string;
 }
 
-const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
-  // Check if no tasks are available
-  if (tasks.length === 0) {
-    return (
-      <div className="chat-container">
-        <div className="chat-messages" style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center',
-          height: '100%',
-          padding: '40px'
-        }}>
-          <div style={{ 
-            textAlign: 'center',
-            maxWidth: '400px',
-            background: '#fff3cd',
-            padding: '30px',
-            borderRadius: '12px',
-            border: '2px solid #ffc107'
-          }}>
-            <div style={{ fontSize: '48px', marginBottom: '20px' }}>⚠️</div>
-            <h2 style={{ margin: '0 0 15px 0', color: '#856404', fontSize: '24px' }}>No Tasks Found</h2>
-            <p style={{ margin: '0 0 20px 0', color: '#856404', fontSize: '16px', lineHeight: '1.5' }}>
-              Please create a task in the Research Panel to start chatting.
-            </p>
-            <Link
-              to="/research"
-              style={{
-                display: 'inline-block',
-                padding: '12px 24px',
-                background: '#ffc107',
-                color: '#000',
-                textDecoration: 'none',
-                borderRadius: '6px',
-                fontWeight: '600',
-                transition: 'background 0.3s'
-              }}
-              onMouseOver={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = '#ffb300' }}
-              onMouseOut={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = '#ffc107' }}
-            >
-              Go to Research Panel
-            </Link>
-          </div>
-        </div>
+// Extracted so ChatBox can render it after hooks (avoids hook-before-return violation)
+const NoTasksView: React.FC = () => (
+  <div className="chat-container">
+    <div className="chat-messages" style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      height: '100%',
+      padding: '40px'
+    }}>
+      <div style={{
+        textAlign: 'center',
+        maxWidth: '400px',
+        background: '#fff3cd',
+        padding: '30px',
+        borderRadius: '12px',
+        border: '2px solid #ffc107'
+      }}>
+        <div style={{ fontSize: '48px', marginBottom: '20px' }}>⚠️</div>
+        <h2 style={{ margin: '0 0 15px 0', color: '#856404', fontSize: '24px' }}>No Tasks Found</h2>
+        <p style={{ margin: '0 0 20px 0', color: '#856404', fontSize: '16px', lineHeight: '1.5' }}>
+          Please create a task in the Research Panel to start chatting.
+        </p>
+        <Link
+          to="/research"
+          style={{
+            display: 'inline-block',
+            padding: '12px 24px',
+            background: '#ffc107',
+            color: '#000',
+            textDecoration: 'none',
+            borderRadius: '6px',
+            fontWeight: '600',
+            transition: 'background 0.3s'
+          }}
+          onMouseOver={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = '#ffb300' }}
+          onMouseOut={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = '#ffc107' }}
+        >
+          Go to Research Panel
+        </Link>
       </div>
-    );
-  }
+    </div>
+  </div>
+);
 
+const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation, studyId }) => {
   // Load or initialize conversation from localStorage
   const [selectedModel] = useState(() => {
-    const savedChat = localStorage.getItem('currentChat');
+    const savedChat = localStorage.getItem(`currentChat_${studyId}`);
     if (savedChat) {
       try {
         const parsed = JSON.parse(savedChat);
@@ -147,7 +146,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
       console.log('📡 Loading conversation...');
       
       // Try loading from localStorage only
-      const savedChat = localStorage.getItem('currentChat');
+      const savedChat = localStorage.getItem(`currentChat_${studyId}`);
       if (savedChat) {
         try {
           const parsed = JSON.parse(savedChat);
@@ -234,7 +233,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
         createdAt: conversationCreatedAt, // Use fixed creation time
         lastMessageAt: messages[messages.length - 1].timestamp
       };
-      localStorage.setItem('currentChat', JSON.stringify(conversation));
+      localStorage.setItem(`currentChat_${studyId}`, JSON.stringify(conversation));
     }
   }, [messages, conversationId, selectedModel, currentGreeting]);
 
@@ -350,6 +349,9 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation }) => {
       handleSendMessage();
     }
   };
+
+  // Guard placed here (after all hooks) to satisfy React's Rules of Hooks
+  if (tasks.length === 0) return <NoTasksView />;
 
   return (
     <div className="chat-container">

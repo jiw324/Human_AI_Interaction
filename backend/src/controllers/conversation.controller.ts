@@ -3,37 +3,6 @@ import { Conversation } from '../types';
 import { AppError } from '../middleware/error.middleware';
 import db from '../config/database';
 
-/**
- * Ensure user exists in database (auto-create for device IDs)
- */
-async function ensureUserExists(userId: string): Promise<void> {
-  try {
-    const existingUser = await db.queryOne(
-      'SELECT id FROM users WHERE id = ?',
-      [userId]
-    );
-    
-    if (!existingUser) {
-      // Auto-create user record for this device
-      // Use full device ID as username to avoid collisions
-      await db.query(
-        `INSERT INTO users (id, username, email, password_hash, research_key) 
-         VALUES (?, ?, ?, ?, ?)`,
-        [
-          userId,
-          userId, // Use full device ID as username (guaranteed unique)
-          `${userId}@device.local`, // Email: deviceid@device.local
-          '', // No password for device users
-          null // NULL for research_key (empty string would violate UNIQUE constraint)
-        ]
-      );
-      console.log('✨ [Backend] Auto-created user record for device:', userId);
-    }
-  } catch (error) {
-    console.error('⚠️ [Backend] Error ensuring user exists:', error);
-    // Don't throw - let the conversation operation continue
-  }
-}
 
 export const getConversations = async (
   req: Request<{ userId: string }>,
@@ -48,31 +17,13 @@ export const getConversations = async (
     }
 
     console.log('📡 [Backend] Fetching conversations from database for:', userId);
-    
-    // Auto-create user record if device ID doesn't exist
-    await ensureUserExists(userId);
 
-    // Check if this is an admin user (has research_key, not a device ID)
-    const isAdmin = userId === 'admin-001' || !userId.startsWith('device_');
-    
-    // Fetch conversations from database (metadata only, no messages)
-    // Admin sees ALL conversations, regular users see only their own
-    let dbConversations;
-    if (isAdmin) {
-      console.log('👑 [Backend] Admin user - fetching ALL conversations');
-      dbConversations = await db.query(
-        `SELECT * FROM conversations 
-         ORDER BY last_message_at DESC`
-      );
-    } else {
-      console.log('📱 [Backend] Device user - fetching device-specific conversations');
-      dbConversations = await db.query(
-        `SELECT * FROM conversations 
-         WHERE user_id = ? 
-         ORDER BY last_message_at DESC`,
-        [userId]
-      );
-    }
+    const dbConversations = await db.query(
+      `SELECT * FROM conversations
+       WHERE user_id = ?
+       ORDER BY last_message_at DESC`,
+      [userId]
+    );
 
     // For each conversation, only fetch message count and last message preview
     const conversations = await Promise.all(
@@ -144,27 +95,10 @@ export const getConversation = async (
 
     console.log('🔍 [Backend] Fetching conversation from database:', conversationId);
 
-    // Check if this is an admin user
-    const isAdmin = userId === 'admin-001' || !userId.startsWith('device_');
-    
-    // Fetch conversation
-    // Admin can fetch any conversation, regular users only their own
-    let conv;
-    if (isAdmin) {
-      console.log('👑 [Backend] Admin user - fetching conversation without user restriction');
-      conv = await db.queryOne(
-        `SELECT * FROM conversations 
-         WHERE id = ?`,
-        [conversationId]
-      );
-    } else {
-      console.log('📱 [Backend] Device user - fetching device-specific conversation');
-      conv = await db.queryOne(
-        `SELECT * FROM conversations 
-         WHERE id = ? AND user_id = ?`,
-        [conversationId, userId]
-      );
-    }
+    const conv = await db.queryOne(
+      `SELECT * FROM conversations WHERE id = ? AND user_id = ?`,
+      [conversationId, userId]
+    );
 
     if (!conv) {
       throw new AppError('Conversation not found', 404);
@@ -242,9 +176,6 @@ export const saveConversation = async (
     }
 
     console.log('💾 [Backend] Saving conversation to database:', conversation.id);
-    
-    // Auto-create user record if device ID doesn't exist
-    await ensureUserExists(userId);
 
     // Check if conversation exists
     const existing = await db.queryOne(
@@ -325,25 +256,10 @@ export const deleteConversation = async (
 
     console.log('🗑️ [Backend] Deleting conversation from database:', conversationId);
 
-    // Check if this is an admin user
-    const isAdmin = userId === 'admin-001' || !userId.startsWith('device_');
-    
-    // Delete conversation (messages will cascade delete)
-    // Admin can delete any conversation, regular users only their own
-    let result;
-    if (isAdmin) {
-      console.log('👑 [Backend] Admin user - deleting conversation without user restriction');
-      result = await db.query(
-        'DELETE FROM conversations WHERE id = ?',
-        [conversationId]
-      );
-    } else {
-      console.log('📱 [Backend] Device user - deleting device-specific conversation');
-      result = await db.query(
-        'DELETE FROM conversations WHERE id = ? AND user_id = ?',
-        [conversationId, userId]
-      );
-    }
+    const result = await db.query(
+      'DELETE FROM conversations WHERE id = ? AND user_id = ?',
+      [conversationId, userId]
+    );
 
     if ((result as any).affectedRows === 0) {
       throw new AppError('Conversation not found', 404);

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Navigate, useNavigate } from 'react-router-dom';
 import {
   adminAPI,
   adminAuthService,
@@ -8,55 +9,150 @@ import {
 } from '../services/api';
 import './AdminPanel.css';
 
-// ── Login screen ─────────────────────────────────────────────────────────────
+// ── Delete confirmation modal ─────────────────────────────────────────────
 
-function AdminLogin({ onLogin }: { onLogin: () => void }) {
-  const [key, setKey] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-    const result = await adminAPI.login(key);
-    setLoading(false);
-    if (result.success) {
-      onLogin();
-    } else {
-      setError(result.message || 'Invalid admin key');
-    }
-  };
-
+function ConfirmModal({
+  username,
+  onConfirm,
+  onCancel
+}: {
+  username: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
   return (
-    <div className="admin-login-wrap">
-      <div className="admin-login-card">
-        <h2 className="admin-login-title">Admin Panel</h2>
-        <form onSubmit={handleSubmit} className="admin-login-form">
-          <input
-            type="password"
-            placeholder="Admin key"
-            value={key}
-            onChange={e => setKey(e.target.value)}
-            className="admin-login-input"
-            autoFocus
-          />
-          {error && <p className="admin-login-error">{error}</p>}
-          <button type="submit" className="admin-login-btn" disabled={loading || !key}>
-            {loading ? 'Logging in…' : 'Login'}
-          </button>
-        </form>
+    <div className="admin-modal-overlay">
+      <div className="admin-modal">
+        <h3>Remove Researcher</h3>
+        <p>
+          Are you sure you want to permanently delete <strong>{username}</strong>?
+          This will also delete all their tasks and conversations.
+        </p>
+        <div className="admin-modal-actions">
+          <button className="admin-modal-cancel" onClick={onCancel}>Cancel</button>
+          <button className="admin-modal-confirm" onClick={onConfirm}>Delete</button>
+        </div>
       </div>
     </div>
   );
 }
 
-// ── Users tab ────────────────────────────────────────────────────────────────
+// ── Create researcher form ────────────────────────────────────────────────
 
-function UsersTab({ users }: { users: AdminUser[] }) {
+function CreateResearcherForm({ onCreated }: { onCreated: (user: AdminUser) => void }) {
+  const [visible, setVisible] = useState(false);
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [researchKey, setResearchKey] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    const result = await adminAPI.createUser(username, email, researchKey);
+    setLoading(false);
+    if (result.success && result.data) {
+      onCreated(result.data as AdminUser);
+      setUsername('');
+      setEmail('');
+      setResearchKey('');
+      setVisible(false);
+    } else {
+      setError(result.message || 'Failed to create researcher');
+    }
+  };
+
+  return (
+    <>
+      <button className="admin-create-toggle-btn" onClick={() => setVisible(v => !v)}>
+        {visible ? 'Cancel' : '+ New Researcher'}
+      </button>
+      {visible && (
+        <form className="admin-create-form" onSubmit={handleSubmit}>
+          <div className="admin-create-field">
+            <label>Username *</label>
+            <input
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              placeholder="e.g. dr_smith"
+              required
+            />
+          </div>
+          <div className="admin-create-field">
+            <label>Email *</label>
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="researcher@uni.edu"
+              required
+            />
+          </div>
+          <div className="admin-create-field">
+            <label>Research Key *</label>
+            <input
+              value={researchKey}
+              onChange={e => setResearchKey(e.target.value)}
+              placeholder="unique-key-123"
+              required
+            />
+          </div>
+          {error && <p className="admin-create-error">{error}</p>}
+          <button
+            type="submit"
+            className="admin-create-submit-btn"
+            disabled={loading || !username || !email || !researchKey}
+          >
+            {loading ? 'Creating…' : 'Create'}
+          </button>
+        </form>
+      )}
+    </>
+  );
+}
+
+// ── Researchers tab ───────────────────────────────────────────────────────
+
+function ResearchersTab({
+  users,
+  onUsersChange
+}: {
+  users: AdminUser[];
+  onUsersChange: (users: AdminUser[]) => void;
+}) {
+  const [confirmDelete, setConfirmDelete] = useState<AdminUser | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+
+  const handleDelete = async (user: AdminUser) => {
+    const result = await adminAPI.deleteUser(user.id);
+    if (result.success) {
+      onUsersChange(users.filter(u => u.id !== user.id));
+    }
+    setConfirmDelete(null);
+  };
+
+  const handleToggle = async (user: AdminUser) => {
+    setTogglingId(user.id);
+    const result = await adminAPI.toggleUserStatus(user.id, !user.isActive);
+    if (result.success) {
+      onUsersChange(users.map(u => u.id === user.id ? { ...u, isActive: !u.isActive } : u));
+    }
+    setTogglingId(null);
+  };
+
   return (
     <div className="admin-tab-content">
-      <p className="admin-count">{users.length} user{users.length !== 1 ? 's' : ''}</p>
+      <div className="admin-create-bar">
+        <p className="admin-count" style={{ margin: 0 }}>
+          {users.length} researcher{users.length !== 1 ? 's' : ''}
+        </p>
+        <CreateResearcherForm
+          onCreated={user => onUsersChange([...users, user])}
+        />
+      </div>
+
       <div className="admin-table-wrap">
         <table className="admin-table">
           <thead>
@@ -67,9 +163,10 @@ function UsersTab({ users }: { users: AdminUser[] }) {
               <th>Tasks</th>
               <th>Conversations</th>
               <th>Messages</th>
-              <th>Active</th>
+              <th>Status</th>
               <th>Last Login</th>
               <th>Created</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -89,19 +186,46 @@ function UsersTab({ users }: { users: AdminUser[] }) {
                   <span className={`admin-status-dot ${u.isActive ? 'active' : 'inactive'}`} />
                 </td>
                 <td className="admin-cell-date">
-                  {u.lastLogin ? new Date(u.lastLogin).toLocaleString() : <span className="admin-muted">never</span>}
+                  {u.lastLogin
+                    ? new Date(u.lastLogin).toLocaleString()
+                    : <span className="admin-muted">never</span>}
                 </td>
                 <td className="admin-cell-date">{new Date(u.createdAt).toLocaleString()}</td>
+                <td>
+                  <div className="admin-cell-actions">
+                    <button
+                      className={`admin-action-btn ${u.isActive ? 'admin-btn-toggle-active' : 'admin-btn-toggle-inactive'}`}
+                      onClick={() => handleToggle(u)}
+                      disabled={togglingId === u.id}
+                    >
+                      {u.isActive ? 'Deactivate' : 'Activate'}
+                    </button>
+                    <button
+                      className="admin-action-btn admin-btn-danger"
+                      onClick={() => setConfirmDelete(u)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {confirmDelete && (
+        <ConfirmModal
+          username={confirmDelete.username}
+          onConfirm={() => handleDelete(confirmDelete)}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
     </div>
   );
 }
 
-// ── Messages tab ─────────────────────────────────────────────────────────────
+// ── Conversations tab (unchanged from original AdminPanel) ────────────────
 
 function ConversationRow({
   conv,
@@ -168,7 +292,7 @@ function ConversationRow({
   );
 }
 
-function MessagesTab({ conversations }: { conversations: AdminConversation[] }) {
+function ConversationsTab({ conversations }: { conversations: AdminConversation[] }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
 
@@ -228,15 +352,16 @@ function MessagesTab({ conversations }: { conversations: AdminConversation[] }) 
   );
 }
 
-// ── Root component ────────────────────────────────────────────────────────────
+// ── Root dashboard component ──────────────────────────────────────────────
 
-export default function AdminPanel() {
-  const [authed, setAuthed] = useState(adminAuthService.isAuthenticated());
-  const [tab, setTab] = useState<'users' | 'messages'>('users');
+export default function AdminDashboard() {
+  const navigate = useNavigate();
+  const [tab, setTab] = useState<'researchers' | 'conversations'>('researchers');
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [conversations, setConversations] = useState<AdminConversation[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Hooks must all be declared before any conditional returns
   const loadData = useCallback(async () => {
     setLoading(true);
     const [u, c] = await Promise.all([
@@ -249,20 +374,23 @@ export default function AdminPanel() {
   }, []);
 
   useEffect(() => {
-    if (authed) loadData();
-  }, [authed, loadData]);
+    loadData();
+  }, [loadData]);
+
+  // Guard: redirect to /admin login if not authenticated
+  if (!adminAuthService.isAuthenticated()) {
+    return <Navigate to="/admin" replace />;
+  }
 
   const handleLogout = () => {
     adminAuthService.clearToken();
-    setAuthed(false);
+    navigate('/admin', { replace: true });
   };
-
-  if (!authed) return <AdminLogin onLogin={() => setAuthed(true)} />;
 
   return (
     <div className="admin-panel">
       <div className="admin-header">
-        <h1 className="admin-title">Admin Panel</h1>
+        <h1 className="admin-title">Admin Dashboard</h1>
         <div className="admin-header-right">
           <button className="admin-refresh-btn" onClick={loadData} disabled={loading}>
             {loading ? 'Refreshing…' : 'Refresh'}
@@ -273,15 +401,15 @@ export default function AdminPanel() {
 
       <div className="admin-tabs">
         <button
-          className={`admin-tab-btn ${tab === 'users' ? 'active' : ''}`}
-          onClick={() => setTab('users')}
+          className={`admin-tab-btn ${tab === 'researchers' ? 'active' : ''}`}
+          onClick={() => setTab('researchers')}
         >
-          Users
+          Researchers
           <span className="admin-tab-count">{users.length}</span>
         </button>
         <button
-          className={`admin-tab-btn ${tab === 'messages' ? 'active' : ''}`}
-          onClick={() => setTab('messages')}
+          className={`admin-tab-btn ${tab === 'conversations' ? 'active' : ''}`}
+          onClick={() => setTab('conversations')}
         >
           Conversations &amp; Messages
           <span className="admin-tab-count">{conversations.length}</span>
@@ -290,10 +418,10 @@ export default function AdminPanel() {
 
       {loading ? (
         <div className="admin-loading">Loading data…</div>
-      ) : tab === 'users' ? (
-        <UsersTab users={users} />
+      ) : tab === 'researchers' ? (
+        <ResearchersTab users={users} onUsersChange={setUsers} />
       ) : (
-        <MessagesTab conversations={conversations} />
+        <ConversationsTab conversations={conversations} />
       )}
     </div>
   );

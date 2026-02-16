@@ -5,7 +5,8 @@ import HomePage from './components/HomePage'
 import ResearchPanel from './components/ResearchPanel'
 import ConversationHistory from './components/ConversationHistory'
 import LoginPage from './components/LoginPage'
-import AdminPanel from './components/AdminPanel'
+import AdminLoginPage from './components/AdminLoginPage'
+import AdminDashboard from './components/AdminDashboard'
 import { authService, tasksAPI, conversationsAPI, type Task, type Conversation, type Message } from './services/api'
 import { getDeviceId } from './utils/deviceId'
 import { useBackendHealth } from './hooks/useBackendHealth'
@@ -14,8 +15,10 @@ import './App.css'
 /**
  * Participant-facing chatbox scoped to a specific research group.
  * URL: /study/:userId  (the researcher's UUID — not their secret research key)
+ * Conversations are saved to the backend under the researcher's UUID so they
+ * appear in the researcher's history when they reload from the database.
  */
-function StudyChatPage({ onSaveConversation }: { onSaveConversation: (c: Conversation) => void }) {
+function StudyChatPage() {
   const { userId } = useParams<{ userId: string }>();
   const [studyTasks, setStudyTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,12 +39,22 @@ function StudyChatPage({ onSaveConversation }: { onSaveConversation: (c: Convers
     return () => { cancelled = true; };
   }, [userId]);
 
+  // Save conversation under the researcher's UUID so it appears in their history.
+  const handleSaveConversation = useCallback(async (conversation: Conversation) => {
+    if (!userId) return;
+    try {
+      await conversationsAPI.save(userId, conversation);
+    } catch (error) {
+      console.error('❌ Error saving conversation:', error);
+    }
+  }, [userId]);
+
   if (loading) return <div style={{ padding: '40px', textAlign: 'center' }}>Loading study...</div>;
   if (notFound) return <div style={{ padding: '40px', textAlign: 'center' }}>Research group not found.</div>;
 
   return (
     <div className="chat-section">
-      <ChatBox tasks={studyTasks} onSaveConversation={onSaveConversation} />
+      <ChatBox tasks={studyTasks} onSaveConversation={handleSaveConversation} studyId={userId ?? ''} />
     </div>
   );
 }
@@ -63,7 +76,7 @@ function ResearchPanelPage({
   const { userId } = useParams<{ userId: string }>();
   const currentUserId = authService.getUserId();
 
-  if (!isLoggedIn) return <Navigate to="/login" replace />;
+  if (!isLoggedIn) return <Navigate to="/research" replace />;
   if (userId !== currentUserId && currentUserId) {
     return <Navigate to={`/research/${currentUserId}`} replace />;
   }
@@ -93,7 +106,7 @@ function HistoryPage({
   const { userId } = useParams<{ userId: string }>();
   const currentUserId = authService.getUserId();
 
-  if (!isLoggedIn) return <Navigate to="/login" replace />;
+  if (!isLoggedIn) return <Navigate to="/research" replace />;
   if (userId !== currentUserId && currentUserId) {
     return <Navigate to={`/history/${currentUserId}`} replace />;
   }
@@ -123,18 +136,24 @@ function App() {
   useEffect(() => {
     const loadTasks = async () => {
       if (backendStatus === 'online' && isLoggedIn) {
+        const userId = authService.getUserId();
+        const cacheKey = userId ? `research_tasks_${userId}` : null;
         console.log('📡 Loading tasks for logged-in researcher...');
 
-        const cachedTasks = localStorage.getItem('research_tasks');
-        if (cachedTasks) {
-          try {
-            setTasks(JSON.parse(cachedTasks));
-          } catch (_) {}
+        if (cacheKey) {
+          const cachedTasks = localStorage.getItem(cacheKey);
+          if (cachedTasks) {
+            try {
+              setTasks(JSON.parse(cachedTasks));
+            } catch (_) {}
+          }
         }
 
         const fetchedTasks = await tasksAPI.getAll();
         setTasks(fetchedTasks);
-        localStorage.setItem('research_tasks', JSON.stringify(fetchedTasks));
+        if (cacheKey) {
+          localStorage.setItem(cacheKey, JSON.stringify(fetchedTasks));
+        }
         console.log('✨ Tasks loaded from backend');
       }
     };
@@ -143,14 +162,17 @@ function App() {
 
   // Save tasks to localStorage whenever they change
   useEffect(() => {
-    if (tasks.length > 0) {
-      localStorage.setItem('research_tasks', JSON.stringify(tasks));
+    const userId = authService.getUserId();
+    if (tasks.length > 0 && userId) {
+      localStorage.setItem(`research_tasks_${userId}`, JSON.stringify(tasks));
     }
   }, [tasks]);
 
-  // Load conversations from localStorage on mount
+  // Load conversations from localStorage on mount (researcher-scoped only)
   useEffect(() => {
-    const savedConversations = localStorage.getItem('conversations');
+    const userId = authService.getUserId();
+    if (!userId) return;
+    const savedConversations = localStorage.getItem(`conversations_${userId}`);
     if (savedConversations) {
       try {
         const parsed = JSON.parse(savedConversations);
@@ -176,34 +198,6 @@ function App() {
     }
   }, []);
 
-  const handleSaveConversation = useCallback(async (conversation: Conversation) => {
-    setConversations(prev => {
-      const existingIndex = prev.findIndex(conv => conv.id === conversation.id);
-      if (existingIndex >= 0) {
-        const existing = prev[existingIndex];
-        if (existing.messages.length === conversation.messages.length &&
-            existing.lastMessageAt.getTime() === conversation.lastMessageAt.getTime()) {
-          return prev;
-        }
-        const updated = [...prev];
-        updated[existingIndex] = conversation;
-        localStorage.setItem('conversations', JSON.stringify(updated));
-        return updated;
-      } else {
-        const updated = [...prev, conversation];
-        localStorage.setItem('conversations', JSON.stringify(updated));
-        return updated;
-      }
-    });
-
-    try {
-      const userId = authService.getUserId() || await getDeviceId();
-      await conversationsAPI.save(userId, conversation);
-    } catch (error) {
-      console.error('❌ Error saving conversation to backend:', error);
-    }
-  }, []);
-
   const navigate = useNavigate();
 
   const handleDeleteConversation = async (conversationId: string) => {
@@ -211,9 +205,12 @@ function App() {
       const userId = authService.getUserId() || await getDeviceId();
       const success = await conversationsAPI.delete(userId, conversationId);
       if (success) {
+        const researcherId = authService.getUserId();
         setConversations(prev => {
           const updated = prev.filter(conv => conv.id !== conversationId);
-          localStorage.setItem('conversations', JSON.stringify(updated));
+          if (researcherId) {
+            localStorage.setItem(`conversations_${researcherId}`, JSON.stringify(updated));
+          }
           return updated;
         });
       }
@@ -223,32 +220,38 @@ function App() {
   };
 
   const handleConversationsLoaded = useCallback((loadedConversations: Conversation[]) => {
+    const researcherId = authService.getUserId();
     setConversations(prev => {
       const existingById = new Map(prev.map(conv => [conv.id, conv]));
       const merged = loadedConversations.map(conv => {
         const existing = existingById.get(conv.id);
         return existing ? { ...conv, createdAt: existing.createdAt } : conv;
       });
-      localStorage.setItem('conversations', JSON.stringify(merged));
+      if (researcherId) {
+        localStorage.setItem(`conversations_${researcherId}`, JSON.stringify(merged));
+      }
       return merged;
     });
   }, []);
 
-  const handleLogin = (researchKey: string) => {
+  const handleLogin = (_researchKey: string) => {
     setIsLoggedIn(true);
     localStorage.setItem('researchLoggedIn', 'true');
-    localStorage.setItem('researchKey', researchKey);
     // JWT is now stored by authAPI.login(); getUserId() reads it
     const userId = authService.getUserId();
-    navigate(userId ? `/research/${userId}` : '/login');
+    navigate(userId ? `/research/${userId}` : '/research');
   };
 
   const handleLogout = () => {
+    const userId = authService.getUserId();
     setIsLoggedIn(false);
     setTasks([]);
+    setConversations([]);
     localStorage.removeItem('researchLoggedIn');
-    localStorage.removeItem('researchKey');
-    localStorage.removeItem('research_tasks');
+    if (userId) {
+      localStorage.removeItem(`research_tasks_${userId}`);
+      localStorage.removeItem(`conversations_${userId}`);
+    }
     authService.clearToken();
     navigate('/');
   };
@@ -290,19 +293,13 @@ function App() {
           </>
         ) : (
           <NavLink
-            to="/login"
+            to="/research"
             className={({ isActive }) => `nav-btn ${isActive ? 'active' : ''}`}
             style={{ display: 'none' }}
           >
             Research Login
           </NavLink>
         )}
-        <NavLink
-          to="/admin"
-          className={({ isActive }) => `nav-btn ${isActive ? 'active' : ''}`}
-        >
-          Admin
-        </NavLink>
         <div
           className="backend-status"
           title={`Backend: ${backendStatus}${healthStatus.lastChecked ? `\nLast checked: ${healthStatus.lastChecked.toLocaleTimeString()}` : ''}`}
@@ -319,10 +316,10 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route
             path="/study/:userId"
-            element={<StudyChatPage onSaveConversation={handleSaveConversation} />}
+            element={<StudyChatPage />}
           />
           <Route
-            path="/login"
+            path="/research"
             element={<LoginPage onLogin={handleLogin} onBackToHome={handleBackToHome} />}
           />
           <Route
@@ -346,7 +343,8 @@ function App() {
               />
             }
           />
-          <Route path="/admin" element={<AdminPanel />} />
+          <Route path="/admin" element={<AdminLoginPage />} />
+          <Route path="/admin/:adminId" element={<AdminDashboard />} />
         </Routes>
       </div>
     </div>

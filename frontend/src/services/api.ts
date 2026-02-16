@@ -529,14 +529,19 @@ export interface AdminMessage {
   timestamp: string;
 }
 
-// Admin token stored separately from researcher token
-const ADMIN_TOKEN_KEY = 'adminToken';
+// Admin token is intentionally kept in memory only — cleared on every page load,
+// so admin must log in again on every visit.
+// Also purge any leftover key from older localStorage-based versions.
+localStorage.removeItem('adminToken');
+let _adminToken: string | null = null;
 
 export const adminAuthService = {
-  getToken: (): string | null => localStorage.getItem(ADMIN_TOKEN_KEY),
-  setToken: (token: string): void => localStorage.setItem(ADMIN_TOKEN_KEY, token),
-  clearToken: (): void => localStorage.removeItem(ADMIN_TOKEN_KEY),
-  isAuthenticated: (): boolean => !!localStorage.getItem(ADMIN_TOKEN_KEY)
+  getToken: (): string | null => _adminToken,
+  setToken: (token: string): void => { _adminToken = token; },
+  clearToken: (): void => { _adminToken = null; },
+  isAuthenticated: (): boolean => _adminToken !== null,
+  /** Returns a stable admin ID — always 'admin' for the single admin account. */
+  getAdminId: (): string => 'admin'
 };
 
 async function fetchAdmin(endpoint: string, options: RequestInit = {}): Promise<Response> {
@@ -594,6 +599,47 @@ export const adminAPI = {
       return data.success ? data.data : [];
     } catch {
       return [];
+    }
+  },
+
+  createUser: async (
+    username: string,
+    email: string,
+    researchKey: string,
+    password?: string
+  ): Promise<{ success: boolean; data?: AdminUser; message?: string }> => {
+    try {
+      const response = await fetchAdmin('/users', {
+        method: 'POST',
+        body: JSON.stringify({ username, email, researchKey, password })
+      });
+      return await response.json();
+    } catch {
+      return { success: false, message: 'Failed to connect to backend' };
+    }
+  },
+
+  deleteUser: async (userId: string): Promise<{ success: boolean; message?: string }> => {
+    try {
+      const response = await fetchAdmin(`/users/${encodeURIComponent(userId)}`, { method: 'DELETE' });
+      return await response.json();
+    } catch {
+      return { success: false, message: 'Failed to connect to backend' };
+    }
+  },
+
+  toggleUserStatus: async (
+    userId: string,
+    isActive: boolean
+  ): Promise<{ success: boolean; message?: string }> => {
+    try {
+      const response = await fetchAdmin(`/users/${encodeURIComponent(userId)}/status`, {
+        method: 'PUT',
+        body: JSON.stringify({ isActive })
+      });
+      return await response.json();
+    } catch {
+      return { success: false, message: 'Failed to connect to backend' };
     }
   }
 };

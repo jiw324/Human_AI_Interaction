@@ -344,3 +344,187 @@
 }
 .admin-login-btn:hover:not(:disabled) { background: #1d4ed8; }
 .admin-login-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Researcher CRUD ─────────────────────────────────────────────────────── */
+
+.admin-action-btn {
+  padding: 4px 10px;
+  border-radius: 5px;
+  border: 1px solid;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.admin-btn-danger {
+  border-color: #fca5a5;
+  background: #fff5f5;
+  color: #dc2626;
+}
+.admin-btn-danger:hover { background: #fee2e2; }
+
+.admin-btn-toggle-active {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #15803d;
+}
+.admin-btn-toggle-active:hover { background: #dcfce7; }
+
+.admin-btn-toggle-inactive {
+  border-color: #e5e7eb;
+  background: #f9fafb;
+  color: #6b7280;
+}
+.admin-btn-toggle-inactive:hover { background: #f3f4f6; }
+
+.admin-cell-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  white-space: nowrap;
+}
+
+/* ── Create researcher form ──────────────────────────────────────────────── */
+
+.admin-create-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  gap: 10px;
+}
+
+.admin-create-toggle-btn {
+  padding: 7px 16px;
+  border-radius: 6px;
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  color: #15803d;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.admin-create-toggle-btn:hover { background: #dcfce7; }
+
+.admin-create-form {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 18px 20px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.admin-create-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 150px;
+}
+
+.admin-create-field label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.admin-create-field input {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.admin-create-field input:focus { border-color: #2563eb; }
+
+.admin-create-submit-btn {
+  padding: 8px 20px;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  align-self: flex-end;
+}
+.admin-create-submit-btn:hover:not(:disabled) { background: #1d4ed8; }
+.admin-create-submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.admin-create-error {
+  width: 100%;
+  color: #dc2626;
+  font-size: 0.82rem;
+  margin: 0;
+}
+
+/* ── Confirm modal ───────────────────────────────────────────────────────── */
+
+.admin-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.admin-modal {
+  background: #fff;
+  border-radius: 12px;
+  padding: 28px 32px;
+  width: 360px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+}
+
+.admin-modal h3 {
+  margin: 0 0 10px;
+  font-size: 1.1rem;
+  color: #111827;
+}
+
+.admin-modal p {
+  margin: 0 0 22px;
+  font-size: 0.9rem;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.admin-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.admin-modal-cancel {
+  padding: 8px 18px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #f9fafb;
+  color: #374151;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+.admin-modal-cancel:hover { background: #f3f4f6; }
+
+.admin-modal-confirm {
+  padding: 8px 18px;
+  border: none;
+  border-radius: 6px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.admin-modal-confirm:hover { background: #b91c1c; }

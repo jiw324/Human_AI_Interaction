@@ -34,9 +34,6 @@ interface ResearchPanelProps {
   onTasksChange: (tasks: Task[]) => void;
 }
 
-// AI-SUGGESTION: Persist prompt drafts so users don't lose unsaved text on refresh.
-const PROMPT_DRAFTS_STORAGE_KEY = 'research_prompt_drafts_v1';
-
 type PromptDraft = {
   systemPrompt: string;
   taskPrompt: string;
@@ -46,6 +43,7 @@ type PromptDraft = {
 type PromptDraftMap = Record<string, PromptDraft>;
 
 const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) => {
+  const tasksCacheKey = `research_tasks_${authService.getUserId() ?? 'unknown'}`;
   const [activeTaskId, setActiveTaskId] = useState<string>(tasks[0]?.id || '');
   const [newTaskName, setNewTaskName] = useState<string>('');
   const isAddingTask = useRef(false);
@@ -55,9 +53,7 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
   // Dedicated draft state for prompts so they don't reset while typing
   const [systemPromptDraft, setSystemPromptDraft] = useState<string>('');
   const [taskPromptDraft, setTaskPromptDraft] = useState<string>('');
-  const [isEditingSystemPrompt, setIsEditingSystemPrompt] = useState(false);
-  const [isEditingTaskPrompt, setIsEditingTaskPrompt] = useState(false);
-  const systemPromptRef = useRef<HTMLTextAreaElement>(null);
+const systemPromptRef = useRef<HTMLTextAreaElement>(null);
   const taskPromptRef = useRef<HTMLTextAreaElement>(null);
   
   // Log when tasks are received
@@ -179,7 +175,7 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
         setEditingSettings(null);
         
         // Explicitly save to localStorage
-        localStorage.setItem('research_tasks', JSON.stringify(updatedTasks));
+        localStorage.setItem(tasksCacheKey, JSON.stringify(updatedTasks));
         console.log('💾 Tasks updated in localStorage');
         
         alert('✅ Settings updated successfully!');
@@ -220,10 +216,9 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
 
         // AI-SUGGESTION: Clear local draft now that it's saved.
         clearPromptDraftForActiveTask();
-        setIsEditingSystemPrompt(false);
-        
+
         // Explicitly save to localStorage
-        localStorage.setItem('research_tasks', JSON.stringify(updatedTasks));
+        localStorage.setItem(tasksCacheKey, JSON.stringify(updatedTasks));
         console.log('💾 System prompt updated in localStorage');
 
         // AI-SUGGESTION: Clear saved draft after successful save so future refreshes show the saved value.
@@ -267,10 +262,9 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
 
         // AI-SUGGESTION: Clear local draft now that it's saved.
         clearPromptDraftForActiveTask();
-        setIsEditingTaskPrompt(false);
-        
+
         // Explicitly save to localStorage
-        localStorage.setItem('research_tasks', JSON.stringify(updatedTasks));
+        localStorage.setItem(tasksCacheKey, JSON.stringify(updatedTasks));
         console.log('💾 Task prompt updated in localStorage');
 
         // AI-SUGGESTION: Clear saved draft after successful save so future refreshes show the saved value.
@@ -341,7 +335,7 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
         onTasksChange(updatedTasks);
         
         // Save to localStorage
-        localStorage.setItem('research_tasks', JSON.stringify(updatedTasks));
+        localStorage.setItem(tasksCacheKey, JSON.stringify(updatedTasks));
         console.log('💾 New task saved to localStorage');
         
         setActiveTaskId(newTask.id);
@@ -403,30 +397,10 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
     }
   };
 
-  const studyUserId = authService.getUserId();
-  const studyUrl = studyUserId
-    ? `${window.location.origin}/study/${studyUserId}`
-    : null;
-
   return (
     <div className="research-panel">
       <div className="panel-header">
         <h2>AI Research Panel</h2>
-        {studyUrl && (
-          <div style={{ marginTop: '8px', fontSize: '13px', color: '#555' }}>
-            <span style={{ fontWeight: 600 }}>Participant chat URL: </span>
-            <a href={studyUrl} target="_blank" rel="noreferrer" style={{ wordBreak: 'break-all' }}>
-              {studyUrl}
-            </a>
-            <button
-              onClick={() => navigator.clipboard.writeText(studyUrl)}
-              style={{ marginLeft: '8px', fontSize: '12px', cursor: 'pointer', padding: '2px 8px' }}
-              title="Copy to clipboard"
-            >
-              Copy
-            </button>
-          </div>
-        )}
       </div>
 
       <div className="panel-content">

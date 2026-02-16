@@ -12,7 +12,6 @@ export const login = async (
   try {
     const { researchKey } = req.body;
     console.log('🔐 [Backend] Login attempt received');
-    console.log(`🔑 [Backend] Research key provided: ${researchKey}`);
 
     if (!researchKey) {
       console.log('❌ [Backend] No research key provided');

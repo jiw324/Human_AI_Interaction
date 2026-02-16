@@ -5,14 +5,17 @@
 
 import { Router } from 'express';
 import { liteLLMController } from '../controllers/litellm.controller';
+import { authenticate } from '../middleware/auth.middleware';
 
 const router = Router();
 
-// Public routes (no authentication required for now, can add later)
+// Public route — any visitor can browse available models
 router.get('/models', liteLLMController.getModels);
-router.get('/config', liteLLMController.getConfig);
-router.post('/config', liteLLMController.updateConfig);
-router.post('/test-connection', liteLLMController.testConnection);
+
+// Researcher-only routes — require JWT (config contains API keys)
+router.get('/config', authenticate, liteLLMController.getConfig);
+router.post('/config', authenticate, liteLLMController.updateConfig);
+router.post('/test-connection', authenticate, liteLLMController.testConnection);
 
 export default router;
 

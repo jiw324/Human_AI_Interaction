@@ -16,7 +16,7 @@ export interface AIModel {
 
 export interface AISettings {
   personality: string;
-  responseSpeed: string;
+  responseSpeed: number;
   creativity: number;
   helpfulness: number;
   verbosity: number;
