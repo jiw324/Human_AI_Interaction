@@ -38,7 +38,7 @@ const transformTaskFromDB = (dbTask: any) => {
 export const getAllTasks = async (req: Request, res: Response) => {
   try {
     // Get user ID from authenticated request
-    const userId = (req as any).user?.id || 'admin-001'; // Fallback for development
+    const userId = (req as any).user.id;
     
     console.log('📤 [Backend] Fetching tasks from database for user:', userId);
     
@@ -79,7 +79,7 @@ export const getAllTasks = async (req: Request, res: Response) => {
 export const getTaskById = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const userId = (req as any).user?.id || 'admin-001';
+    const userId = (req as any).user.id;
     
     console.log(`🔍 [Backend] Fetching task ${id} for user ${userId}`);
     
@@ -122,7 +122,7 @@ export const getTaskById = async (req: Request, res: Response): Promise<void> =>
 export const createTask = async (req: Request, res: Response): Promise<void> => {
   try {
     const { name, settings } = req.body;
-    const userId = (req as any).user?.id || 'admin-001';
+    const userId = (req as any).user.id;
     
     // Validation
     if (!name || !settings) {
@@ -231,7 +231,7 @@ export const updateTask = async (req: Request, res: Response): Promise<void> => 
   try {
     const { id } = req.params;
     const { name, settings } = req.body;
-    const userId = (req as any).user?.id || 'admin-001';
+    const userId = (req as any).user.id;
     
     console.log('🔄 [Backend] Updating task:', id);
     
@@ -390,12 +390,96 @@ export const updateTask = async (req: Request, res: Response): Promise<void> => 
 };
 
 /**
+ * Get all active research groups for the home page directory.
+ * Returns only public fields — research key and credentials are never included.
+ */
+export const getResearchGroups = async (_req: Request, res: Response): Promise<void> => {
+  try {
+    console.log('🏠 [Backend] Fetching research groups for home page');
+
+    const groups = await db.query(
+      `SELECT u.id, u.username,
+              COUNT(t.id) AS task_count
+       FROM users u
+       LEFT JOIN tasks t ON t.user_id = u.id AND t.is_active = TRUE
+       WHERE u.is_active = TRUE AND u.research_key IS NOT NULL
+       GROUP BY u.id, u.username
+       ORDER BY u.username ASC`,
+      []
+    );
+
+    console.log(`📊 [Backend] Found ${groups.length} research groups`);
+
+    res.status(200).json({
+      success: true,
+      data: groups.map((g: any) => ({
+        id: g.id,
+        name: g.username,
+        taskCount: Number(g.task_count)
+      }))
+    });
+  } catch (error) {
+    console.error('❌ [Backend] Error fetching research groups:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch research groups',
+      error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
+    });
+  }
+};
+
+/**
+ * Get tasks by user ID (public endpoint for participant chat URLs).
+ * The URL contains the user's UUID — not their secret research key.
+ */
+export const getTasksByUserId = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { userId } = req.params;
+
+    console.log('🔗 [Backend] Fetching tasks for study userId:', userId);
+
+    // Verify the user exists and is active
+    const user = await db.queryOne(
+      `SELECT id FROM users WHERE id = ? AND is_active = TRUE`,
+      [userId]
+    );
+
+    if (!user) {
+      console.log('⚠️ [Backend] User not found for study URL:', userId);
+      res.status(404).json({ success: false, message: 'Research group not found' });
+      return;
+    }
+
+    const tasks = await db.query(
+      `SELECT * FROM tasks WHERE user_id = ? AND is_active = TRUE ORDER BY created_at ASC`,
+      [userId]
+    );
+
+    console.log(`📊 [Backend] Found ${tasks.length} tasks for userId: ${userId}`);
+
+    const transformedTasks = tasks.map((t: any) => transformTaskFromDB(t));
+
+    res.status(200).json({
+      success: true,
+      data: transformedTasks
+    });
+  } catch (error) {
+    console.error('❌ [Backend] Error fetching tasks by userId:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch tasks',
+      error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
+    });
+  }
+};
+
+/**
  * Delete a task (soft delete)
  */
 export const deleteTask = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const userId = (req as any).user?.id || 'admin-001';
+    const userId = (req as any).user.id;
     
     console.log('🗑️ [Backend] Deleting task:', id);
     

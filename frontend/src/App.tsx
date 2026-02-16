@@ -1,70 +1,150 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Routes, Route, NavLink, useNavigate, Navigate } from 'react-router-dom'
+import { Routes, Route, NavLink, useNavigate, Navigate, useParams } from 'react-router-dom'
 import ChatBox from './components/ChatBox'
+import HomePage from './components/HomePage'
 import ResearchPanel from './components/ResearchPanel'
 import ConversationHistory from './components/ConversationHistory'
 import LoginPage from './components/LoginPage'
+import AdminPanel from './components/AdminPanel'
 import { authService, tasksAPI, conversationsAPI, type Task, type Conversation, type Message } from './services/api'
 import { getDeviceId } from './utils/deviceId'
 import { useBackendHealth } from './hooks/useBackendHealth'
 import './App.css'
 
+/**
+ * Participant-facing chatbox scoped to a specific research group.
+ * URL: /study/:userId  (the researcher's UUID — not their secret research key)
+ */
+function StudyChatPage({ onSaveConversation }: { onSaveConversation: (c: Conversation) => void }) {
+  const { userId } = useParams<{ userId: string }>();
+  const [studyTasks, setStudyTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    tasksAPI.getByUserId(userId).then(result => {
+      if (cancelled) return;
+      if (!result) {
+        setNotFound(true);
+      } else {
+        setStudyTasks(result);
+      }
+      setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [userId]);
+
+  if (loading) return <div style={{ padding: '40px', textAlign: 'center' }}>Loading study...</div>;
+  if (notFound) return <div style={{ padding: '40px', textAlign: 'center' }}>Research group not found.</div>;
+
+  return (
+    <div className="chat-section">
+      <ChatBox tasks={studyTasks} onSaveConversation={onSaveConversation} />
+    </div>
+  );
+}
+
+/**
+ * Researcher panel scoped to a specific UUID.
+ * URL: /research/:userId
+ * Redirects to /login if not authenticated, or to the correct UUID if it doesn't match the JWT.
+ */
+function ResearchPanelPage({
+  tasks,
+  onTasksChange,
+  isLoggedIn
+}: {
+  tasks: Task[];
+  onTasksChange: (t: Task[]) => void;
+  isLoggedIn: boolean;
+}) {
+  const { userId } = useParams<{ userId: string }>();
+  const currentUserId = authService.getUserId();
+
+  if (!isLoggedIn) return <Navigate to="/login" replace />;
+  if (userId !== currentUserId && currentUserId) {
+    return <Navigate to={`/research/${currentUserId}`} replace />;
+  }
+
+  return (
+    <div className="research-section">
+      <ResearchPanel tasks={tasks} onTasksChange={onTasksChange} />
+    </div>
+  );
+}
+
+/**
+ * Conversation history scoped to a specific UUID.
+ * URL: /history/:userId
+ */
+function HistoryPage({
+  conversations,
+  onDeleteConversation,
+  onConversationsLoaded,
+  isLoggedIn
+}: {
+  conversations: Conversation[];
+  onDeleteConversation: (id: string) => void;
+  onConversationsLoaded: (c: Conversation[]) => void;
+  isLoggedIn: boolean;
+}) {
+  const { userId } = useParams<{ userId: string }>();
+  const currentUserId = authService.getUserId();
+
+  if (!isLoggedIn) return <Navigate to="/login" replace />;
+  if (userId !== currentUserId && currentUserId) {
+    return <Navigate to={`/history/${currentUserId}`} replace />;
+  }
+
+  return (
+    <div className="history-section">
+      <ConversationHistory
+        conversations={conversations}
+        onDeleteConversation={onDeleteConversation}
+        onConversationsLoaded={onConversationsLoaded}
+      />
+    </div>
+  );
+}
+
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
-    // Check if user is logged in from localStorage and has valid token
     return localStorage.getItem('researchLoggedIn') === 'true' && authService.isAuthenticated();
   });
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [tasksLoading, setTasksLoading] = useState<boolean>(true);
-  
-  // AI-SUGGESTION: Backend health check is debounced:
-  // runs on mount, then 60s after the user's last interaction.
+
   const healthStatus = useBackendHealth();
   const backendStatus = healthStatus.isOnline ? 'online' : 'offline';
 
-  // Load tasks from localStorage first, then sync with backend
+  // Load tasks only when logged in — GET /api/tasks now requires auth
   useEffect(() => {
     const loadTasks = async () => {
-      if (backendStatus === 'online') {
-        console.log('📡 Loading tasks (no login required)...');
-        setTasksLoading(true);
-        
-        // Try to load from localStorage first for instant UI
+      if (backendStatus === 'online' && isLoggedIn) {
+        console.log('📡 Loading tasks for logged-in researcher...');
+
         const cachedTasks = localStorage.getItem('research_tasks');
         if (cachedTasks) {
           try {
-            const parsed = JSON.parse(cachedTasks);
-            console.log('💾 Loaded tasks from localStorage:', parsed);
-            setTasks(parsed);
-          } catch (error) {
-            console.error('Error parsing cached tasks:', error);
-          }
+            setTasks(JSON.parse(cachedTasks));
+          } catch (_) {}
         }
-        
-        // Then fetch from backend and update
+
         const fetchedTasks = await tasksAPI.getAll();
-        console.log('📦 Tasks received from backend:', fetchedTasks);
         setTasks(fetchedTasks);
-        
-        // Save to localStorage
         localStorage.setItem('research_tasks', JSON.stringify(fetchedTasks));
-        console.log('💾 Tasks saved to localStorage');
-        
-        setTasksLoading(false);
-        console.log('✨ Tasks state updated in App');
-      } else {
-        console.log('⏸️ Backend offline, not loading tasks');
+        console.log('✨ Tasks loaded from backend');
       }
     };
     loadTasks();
-  }, [backendStatus]);
+  }, [backendStatus, isLoggedIn]);
 
   // Save tasks to localStorage whenever they change
   useEffect(() => {
     if (tasks.length > 0) {
       localStorage.setItem('research_tasks', JSON.stringify(tasks));
-      console.log('💾 Tasks saved to localStorage (auto-sync)');
     }
   }, [tasks]);
 
@@ -74,18 +154,14 @@ function App() {
     if (savedConversations) {
       try {
         const parsed = JSON.parse(savedConversations);
-        // Convert date strings back to Date objects and sort messages
         const conversationsWithDates = parsed.map((conv: any) => {
           const messages = conv.messages.map((msg: any) => ({
             ...msg,
             timestamp: new Date(msg.timestamp)
           }));
-          
-          // Sort messages by timestamp (oldest first)
-          const sortedMessages = messages.sort((a: Message, b: Message) => 
+          const sortedMessages = messages.sort((a: Message, b: Message) =>
             new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
           );
-          
           return {
             ...conv,
             createdAt: new Date(conv.createdAt),
@@ -101,19 +177,14 @@ function App() {
   }, []);
 
   const handleSaveConversation = useCallback(async (conversation: Conversation) => {
-    // Only update state if conversation actually changed
     setConversations(prev => {
       const existingIndex = prev.findIndex(conv => conv.id === conversation.id);
-      
-      // Check if conversation actually changed to prevent unnecessary re-renders
       if (existingIndex >= 0) {
         const existing = prev[existingIndex];
-        // Compare message counts and last message timestamp
         if (existing.messages.length === conversation.messages.length &&
             existing.lastMessageAt.getTime() === conversation.lastMessageAt.getTime()) {
-          return prev; // No change, return same reference
+          return prev;
         }
-        
         const updated = [...prev];
         updated[existingIndex] = conversation;
         localStorage.setItem('conversations', JSON.stringify(updated));
@@ -125,12 +196,9 @@ function App() {
       }
     });
 
-    // Save to backend database
-    // In production, use a static admin user ID; in development, use per-device ID.
     try {
-      const userId = import.meta.env.PROD ? 'admin-001' : await getDeviceId();
+      const userId = authService.getUserId() || await getDeviceId();
       await conversationsAPI.save(userId, conversation);
-      // Removed console.log to reduce spam
     } catch (error) {
       console.error('❌ Error saving conversation to backend:', error);
     }
@@ -140,25 +208,14 @@ function App() {
 
   const handleDeleteConversation = async (conversationId: string) => {
     try {
-      // Determine userId based on login status
-      const isLoggedIn = authService.isAuthenticated();
-      const userId = isLoggedIn ? 'admin-001' : await getDeviceId();
-      
-      // Delete from database
-      console.log('🗑️ Deleting conversation:', conversationId);
+      const userId = authService.getUserId() || await getDeviceId();
       const success = await conversationsAPI.delete(userId, conversationId);
-      
       if (success) {
-        console.log('✅ Conversation deleted from database');
-        // Remove from frontend state
         setConversations(prev => {
           const updated = prev.filter(conv => conv.id !== conversationId);
-          // Save to localStorage
           localStorage.setItem('conversations', JSON.stringify(updated));
           return updated;
         });
-      } else {
-        console.error('❌ Failed to delete conversation from database');
       }
     } catch (error) {
       console.error('❌ Error deleting conversation:', error);
@@ -166,28 +223,13 @@ function App() {
   };
 
   const handleConversationsLoaded = useCallback((loadedConversations: Conversation[]) => {
-    console.log(`🔄 [App.tsx] handleConversationsLoaded called with ${loadedConversations.length} conversations`);
-    console.log(`📋 [App.tsx] Conversation IDs:`, loadedConversations.map(c => c.id));
-
     setConversations(prev => {
-      // Preserve existing createdAt from current state so History time matches ChatBox,
-      // even if backend/database timezones differ.
       const existingById = new Map(prev.map(conv => [conv.id, conv]));
-
       const merged = loadedConversations.map(conv => {
         const existing = existingById.get(conv.id);
-        if (existing) {
-          return {
-            ...conv,
-            createdAt: existing.createdAt, // keep original creation time from client
-          };
-        }
-        return conv;
+        return existing ? { ...conv, createdAt: existing.createdAt } : conv;
       });
-
-      // Also save to localStorage
       localStorage.setItem('conversations', JSON.stringify(merged));
-      console.log(`✅ State updated with ${merged.length} conversations`);
       return merged;
     });
   }, []);
@@ -196,46 +238,50 @@ function App() {
     setIsLoggedIn(true);
     localStorage.setItem('researchLoggedIn', 'true');
     localStorage.setItem('researchKey', researchKey);
-    navigate('/research');
+    // JWT is now stored by authAPI.login(); getUserId() reads it
+    const userId = authService.getUserId();
+    navigate(userId ? `/research/${userId}` : '/login');
   };
 
   const handleLogout = () => {
     setIsLoggedIn(false);
+    setTasks([]);
     localStorage.removeItem('researchLoggedIn');
     localStorage.removeItem('researchKey');
-    authService.clearToken(); // Clear JWT token
+    localStorage.removeItem('research_tasks');
+    authService.clearToken();
     navigate('/');
   };
 
-  const handleBackToHome = () => {
-    navigate('/');
-  };
+  const handleBackToHome = () => navigate('/');
 
+  // Compute current userId for nav links
+  const currentUserId = isLoggedIn ? authService.getUserId() : null;
 
   return (
     <div className="app">
       <div className="simple-nav">
-        <NavLink 
+        <NavLink
           to="/"
           className={({ isActive }) => `nav-btn ${isActive ? 'active' : ''}`}
         >
-          Chat
+          Home
         </NavLink>
-        {isLoggedIn ? (
+        {isLoggedIn && currentUserId ? (
           <>
-            <NavLink 
-              to="/research"
+            <NavLink
+              to={`/research/${currentUserId}`}
               className={({ isActive }) => `nav-btn ${isActive ? 'active' : ''}`}
             >
               Research
             </NavLink>
-            <NavLink 
-              to="/history"
+            <NavLink
+              to={`/history/${currentUserId}`}
               className={({ isActive }) => `nav-btn ${isActive ? 'active' : ''}`}
             >
               History
             </NavLink>
-            <button 
+            <button
               onClick={handleLogout}
               className="nav-btn logout-btn"
             >
@@ -243,7 +289,7 @@ function App() {
             </button>
           </>
         ) : (
-          <NavLink 
+          <NavLink
             to="/login"
             className={({ isActive }) => `nav-btn ${isActive ? 'active' : ''}`}
             style={{ display: 'none' }}
@@ -251,8 +297,14 @@ function App() {
             Research Login
           </NavLink>
         )}
-        <div 
-          className="backend-status" 
+        <NavLink
+          to="/admin"
+          className={({ isActive }) => `nav-btn ${isActive ? 'active' : ''}`}
+        >
+          Admin
+        </NavLink>
+        <div
+          className="backend-status"
           title={`Backend: ${backendStatus}${healthStatus.lastChecked ? `\nLast checked: ${healthStatus.lastChecked.toLocaleTimeString()}` : ''}`}
         >
           <span className={`status-dot ${backendStatus}`}></span>
@@ -261,62 +313,40 @@ function App() {
           </span>
         </div>
       </div>
-      
+
       <div className="main-content">
         <Routes>
-          <Route 
-            path="/" 
-            element={
-              <div className="chat-section">
-                {tasksLoading ? (
-                  <div style={{ padding: '40px', textAlign: 'center' }}>
-                    <p>Loading tasks...</p>
-                  </div>
-                ) : (
-                  <ChatBox 
-                    tasks={tasks}
-                    onSaveConversation={handleSaveConversation}
-                  />
-                )}
-              </div>
-            } 
+          <Route path="/" element={<HomePage />} />
+          <Route
+            path="/study/:userId"
+            element={<StudyChatPage onSaveConversation={handleSaveConversation} />}
           />
-          <Route 
-            path="/login" 
+          <Route
+            path="/login"
+            element={<LoginPage onLogin={handleLogin} onBackToHome={handleBackToHome} />}
+          />
+          <Route
+            path="/research/:userId"
             element={
-              <LoginPage 
-                onLogin={handleLogin}
-                onBackToHome={handleBackToHome}
+              <ResearchPanelPage
+                tasks={tasks}
+                onTasksChange={setTasks}
+                isLoggedIn={isLoggedIn}
               />
-            } 
-          />
-          <Route
-            path="/research"
-            element={
-              !isLoggedIn ? <Navigate to="/login" replace /> : (
-                <div className="research-section">
-                  <ResearchPanel
-                    tasks={tasks}
-                    onTasksChange={setTasks}
-                  />
-                </div>
-              )
             }
           />
           <Route
-            path="/history"
+            path="/history/:userId"
             element={
-              !isLoggedIn ? <Navigate to="/login" replace /> : (
-                <div className="history-section">
-                  <ConversationHistory
-                    conversations={conversations}
-                    onDeleteConversation={handleDeleteConversation}
-                    onConversationsLoaded={handleConversationsLoaded}
-                  />
-                </div>
-              )
+              <HistoryPage
+                conversations={conversations}
+                onDeleteConversation={handleDeleteConversation}
+                onConversationsLoaded={handleConversationsLoaded}
+                isLoggedIn={isLoggedIn}
+              />
             }
           />
+          <Route path="/admin" element={<AdminPanel />} />
         </Routes>
       </div>
     </div>

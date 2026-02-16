@@ -9,6 +9,7 @@ import settingsRoutes from './routes/settings.routes';
 import conversationRoutes from './routes/conversation.routes';
 import taskRoutes from './routes/task.routes';
 import litellmRoutes from './routes/litellm.routes';
+import adminRoutes from './routes/admin.routes';
 import { errorHandler } from './middleware/error.middleware';
 import db from './config/database';
 import { configService } from './services/config.service';
@@ -81,6 +82,7 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/litellm', litellmRoutes);
+app.use('/api/admin', adminRoutes);
 
 // 404 handler
 app.use((req, res) => {

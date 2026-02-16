@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { tasksAPI, type Task } from '../services/api';
+import { tasksAPI, authService, type Task } from '../services/api';
 import './ResearchPanel.css';
 import './ResearchPanel_additions.css';
 
@@ -403,10 +403,30 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
     }
   };
 
+  const studyUserId = authService.getUserId();
+  const studyUrl = studyUserId
+    ? `${window.location.origin}/study/${studyUserId}`
+    : null;
+
   return (
     <div className="research-panel">
       <div className="panel-header">
         <h2>AI Research Panel</h2>
+        {studyUrl && (
+          <div style={{ marginTop: '8px', fontSize: '13px', color: '#555' }}>
+            <span style={{ fontWeight: 600 }}>Participant chat URL: </span>
+            <a href={studyUrl} target="_blank" rel="noreferrer" style={{ wordBreak: 'break-all' }}>
+              {studyUrl}
+            </a>
+            <button
+              onClick={() => navigator.clipboard.writeText(studyUrl)}
+              style={{ marginLeft: '8px', fontSize: '12px', cursor: 'pointer', padding: '2px 8px' }}
+              title="Copy to clipboard"
+            >
+              Copy
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="panel-content">

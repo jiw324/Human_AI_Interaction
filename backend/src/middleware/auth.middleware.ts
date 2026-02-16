@@ -8,6 +8,42 @@ export interface AuthenticatedRequest extends Request {
   };
 }
 
+/**
+ * Admin middleware — verifies the JWT carries role: 'admin'
+ */
+export const requireAdmin = (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+) => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new AppError('No token provided', 401);
+    }
+
+    const token = authHeader.substring(7);
+    const jwtSecret = process.env.JWT_SECRET || 'fallback-secret-key';
+
+    const decoded = jwt.verify(token, jwtSecret) as { role?: string };
+
+    if (decoded.role !== 'admin') {
+      throw new AppError('Admin access required', 403);
+    }
+
+    next();
+  } catch (error) {
+    if (error instanceof jwt.JsonWebTokenError) {
+      next(new AppError('Invalid token', 401));
+    } else if (error instanceof jwt.TokenExpiredError) {
+      next(new AppError('Token expired', 401));
+    } else {
+      next(error);
+    }
+  }
+};
+
 export const authenticate = (
   req: AuthenticatedRequest,
   _res: Response,

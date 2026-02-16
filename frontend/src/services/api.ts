@@ -77,6 +77,19 @@ export const authService = {
 
   isAuthenticated: (): boolean => {
     return !!authService.getToken();
+  },
+
+  /** Decode the JWT payload (no signature verification needed — just for display).
+   *  Returns the user's `id` field from the token, or null if not logged in. */
+  getUserId: (): string | null => {
+    const token = authService.getToken();
+    if (!token) return null;
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.id ?? null;
+    } catch {
+      return null;
+    }
   }
 };
 
@@ -336,8 +349,47 @@ export interface Task {
   settings: AISettings;
 }
 
+// Research Groups API (public — no auth required)
+export interface ResearchGroup {
+  id: string;
+  name: string;
+  taskCount: number;
+}
+
+export const groupsAPI = {
+  getAll: async (): Promise<ResearchGroup[]> => {
+    try {
+      const response = await fetchAPI('/tasks/groups');
+      const data = await response.json();
+      if (data.success) return data.data;
+      return [];
+    } catch (error) {
+      console.error('❌ Get research groups error:', error);
+      return [];
+    }
+  }
+};
+
 // Tasks API
 export const tasksAPI = {
+  getByUserId: async (userId: string): Promise<Task[] | null> => {
+    try {
+      console.log('📡 Fetching tasks for study userId:', userId);
+      const response = await fetchAPI(`/tasks/by-user/${encodeURIComponent(userId)}`);
+      const data = await response.json();
+
+      if (data.success) {
+        console.log(`✅ Loaded ${data.data.length} tasks for userId: ${userId}`);
+        return data.data;
+      }
+      console.warn('⚠️ Research group not found or no tasks available');
+      return null;
+    } catch (error) {
+      console.error('❌ Get tasks by userId error:', error);
+      return null;
+    }
+  },
+
   getAll: async (): Promise<Task[]> => {
     try {
       console.log('📡 Fetching tasks from backend...');
@@ -437,6 +489,111 @@ export const tasksAPI = {
     } catch (error) {
       console.error('❌ Delete task error:', error);
       return false;
+    }
+  }
+};
+
+// ── Admin types ───────────────────────────────────────────────────────────────
+
+export interface AdminUser {
+  id: string;
+  username: string;
+  email: string;
+  researchKey: string | null;
+  isActive: boolean;
+  createdAt: string;
+  lastLogin: string | null;
+  taskCount: number;
+  conversationCount: number;
+  messageCount: number;
+}
+
+export interface AdminConversation {
+  id: string;
+  title: string;
+  aiModelName: string | null;
+  aiModelPersonality: string | null;
+  createdAt: string;
+  lastMessageAt: string;
+  userId: string;
+  username: string;
+  taskId: string | null;
+  taskName: string | null;
+  messageCount: number;
+}
+
+export interface AdminMessage {
+  id: string;
+  text: string;
+  sender: 'user' | 'ai';
+  timestamp: string;
+}
+
+// Admin token stored separately from researcher token
+const ADMIN_TOKEN_KEY = 'adminToken';
+
+export const adminAuthService = {
+  getToken: (): string | null => localStorage.getItem(ADMIN_TOKEN_KEY),
+  setToken: (token: string): void => localStorage.setItem(ADMIN_TOKEN_KEY, token),
+  clearToken: (): void => localStorage.removeItem(ADMIN_TOKEN_KEY),
+  isAuthenticated: (): boolean => !!localStorage.getItem(ADMIN_TOKEN_KEY)
+};
+
+async function fetchAdmin(endpoint: string, options: RequestInit = {}): Promise<Response> {
+  const token = adminAuthService.getToken();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string> | undefined || {})
+  };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return fetch(`${API_BASE_URL}/admin${endpoint}`, { ...options, headers });
+}
+
+export const adminAPI = {
+  login: async (adminKey: string): Promise<{ success: boolean; message?: string }> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminKey })
+      });
+      const data = await response.json();
+      if (data.success && data.token) {
+        adminAuthService.setToken(data.token);
+      }
+      return data;
+    } catch {
+      return { success: false, message: 'Failed to connect to backend' };
+    }
+  },
+
+  getUsers: async (): Promise<AdminUser[]> => {
+    try {
+      const response = await fetchAdmin('/users');
+      const data = await response.json();
+      return data.success ? data.data : [];
+    } catch {
+      return [];
+    }
+  },
+
+  getConversations: async (): Promise<AdminConversation[]> => {
+    try {
+      const response = await fetchAdmin('/conversations');
+      const data = await response.json();
+      return data.success ? data.data : [];
+    } catch {
+      return [];
+    }
+  },
+
+  getMessages: async (conversationId: string): Promise<AdminMessage[]> => {
+    try {
+      const response = await fetchAdmin(`/conversations/${encodeURIComponent(conversationId)}/messages`);
+      const data = await response.json();
+      return data.success ? data.data : [];
+    } catch {
+      return [];
     }
   }
 };

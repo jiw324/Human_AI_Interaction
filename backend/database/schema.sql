@@ -137,9 +137,10 @@ CREATE TABLE ai_models (
 -- Insert Default Data
 -- ============================================
 
--- Insert default user (password: 'admin123' - should be hashed in production)
+-- Insert default user — use a UUID so the study/research URLs are consistent with all other groups
+SET @admin_id = UUID();
 INSERT INTO users (id, username, email, password_hash, research_key) VALUES
-('admin-001', 'admin', 'admin@example.com', '$2a$10$rGF9Z6vJxKJX.LZR3yKzO.8PxZFvXxNQXPwV5yKJXL5R3yKzO.8PxZ', 'research-key-123');
+(@admin_id, 'admin', 'admin@example.com', '$2a$10$rGF9Z6vJxKJX.LZR3yKzO.8PxZFvXxNQXPwV5yKJXL5R3yKzO.8PxZ', 'research-key-123');
 
 -- Insert default AI models
 INSERT INTO ai_models (name, model_id, provider, description, status) VALUES
@@ -160,26 +161,26 @@ INSERT INTO ai_models (name, model_id, provider, description, status) VALUES
 ('Nova Lite', 'amazon.nova-lite-v1:0', 'Amazon', 'Nova Lite - Efficient processing', 'available'),
 ('Titan Text Embeddings V2', 'amazon.titan-embed-text-v2:0', 'Amazon', 'Text embeddings model', 'available');
 
--- Insert default tasks for admin user
+-- Insert default tasks for admin user (references @admin_id set above)
 INSERT INTO tasks (
     id, user_id, name, personality, response_speed, creativity, helpfulness,
     verbosity, temperature, max_tokens, system_prompt, task_prompt,
     llama_base_url, llama_service_url, llama_api_key, openai_api_key,
     anthropic_api_key, default_model, auto_update_robot_list
 ) VALUES
-('task-001', 'admin-001', 'Task 1', 'analytical', 1.0, 0.7, 0.9, 0.6, 0.7, 1000,
+(UUID(), @admin_id, 'Task 1', 'analytical', 1.0, 0.7, 0.9, 0.6, 0.7, 1000,
  'You are a helpful AI assistant. Be friendly, informative, and engaging in your responses.',
  'Focus on analytical and logical reasoning.',
  'https://llm-proxy.oai-at.org/', '', '', '', '', 'gpt-4o-2024-11-20', FALSE),
-('task-002', 'admin-001', 'Task 2', 'creative', 1.0, 0.9, 0.9, 0.7, 0.8, 1500,
+(UUID(), @admin_id, 'Task 2', 'creative', 1.0, 0.9, 0.9, 0.7, 0.8, 1500,
  'You are a creative AI assistant. Think outside the box and provide innovative solutions.',
  'Be imaginative and explore different perspectives.',
  'https://llm-proxy.oai-at.org/', '', '', '', '', 'claude-3-5-sonnet-20241022', FALSE),
-('task-003', 'admin-001', 'Task 3', 'expert', 1.0, 0.5, 1.0, 0.8, 0.6, 2000,
+(UUID(), @admin_id, 'Task 3', 'expert', 1.0, 0.5, 1.0, 0.8, 0.6, 2000,
  'You are an expert AI assistant. Provide authoritative and detailed information.',
  'Focus on accuracy and comprehensive explanations.',
  'https://llm-proxy.oai-at.org/', '', '', '', '', 'gpt-4o-2024-11-20', FALSE),
-('task-004', 'admin-001', 'Task 4', 'friendly', 1.0, 0.7, 0.9, 0.6, 0.7, 1000,
+(UUID(), @admin_id, 'Task 4', 'friendly', 1.0, 0.7, 0.9, 0.6, 0.7, 1000,
  'You are a helpful AI assistant. Be friendly, informative, and engaging in your responses.',
  'Maintain a warm and approachable tone.',
  'https://llm-proxy.oai-at.org/', '', '', '', '', 'nova-pro-v1', FALSE);

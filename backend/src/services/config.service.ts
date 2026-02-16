@@ -89,6 +89,11 @@ class ConfigService {
         value: 'gpt-3.5-turbo',
         description: 'Default AI model to use if not specified in task',
       },
+      {
+        key: 'ADMIN_KEY',
+        value: '',
+        description: 'Admin panel access key — set this to a strong secret before use',
+      },
     ];
 
     for (const config of basicConfigs) {
