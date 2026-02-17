@@ -7,12 +7,9 @@ export interface User {
   id: string;
   username: string;
   email: string;
-  password_hash: string;
   research_key: string | null;
   is_active: boolean;
   created_at: Date;
-  updated_at: Date;
-  last_login: Date | null;
 }
 
 export interface Task {
@@ -43,38 +40,6 @@ export interface Task {
   updated_at: Date;
 }
 
-export interface AIModel {
-  id: string;
-  name: string;
-  model_id: string;
-  provider: string;
-  status: 'available' | 'unavailable' | 'unknown';
-  description: string | null;
-  max_tokens: number;
-  is_active: boolean;
-  created_at: Date;
-  updated_at: Date;
-}
-
-
-// ============================================
-// View Types
-// ============================================
-
-export interface ViewUserTask extends Task {
-  username: string;
-  email: string;
-}
-
-export interface ViewUserActivity {
-  user_id: string;
-  username: string;
-  email: string;
-  task_count: number;
-  last_login: Date | null;
-  user_since: Date;
-}
-
 // ============================================
 // Request/Response Types
 // ============================================
@@ -82,8 +47,7 @@ export interface ViewUserActivity {
 export interface CreateUserRequest {
   username: string;
   email: string;
-  password: string;
-  research_key?: string;
+  research_key: string;
 }
 
 export interface CreateTaskRequest {

@@ -5,7 +5,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.toggleUserStatus = exports.deleteUser = exports.createUser = exports.getConversationMessages = exports.getAllConversations = exports.getAllUsers = exports.adminLogin = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const uuid_1 = require("uuid");
 const database_1 = __importDefault(require("../config/database"));
 const config_service_1 = require("../services/config.service");
@@ -49,7 +48,6 @@ const getAllUsers = async (_req, res) => {
          u.research_key,
          u.is_active,
          u.created_at,
-         u.last_login,
          COUNT(DISTINCT t.id)  AS task_count,
          COUNT(DISTINCT c.id)  AS conversation_count,
          COUNT(DISTINCT m.id)  AS message_count
@@ -57,7 +55,7 @@ const getAllUsers = async (_req, res) => {
        LEFT JOIN tasks         t ON t.user_id        = u.id AND t.is_active = TRUE
        LEFT JOIN conversations c ON c.user_id        = u.id
        LEFT JOIN messages      m ON m.conversation_id = c.id
-       GROUP BY u.id, u.username, u.email, u.research_key, u.is_active, u.created_at, u.last_login
+       GROUP BY u.id, u.username, u.email, u.research_key, u.is_active, u.created_at
        ORDER BY u.created_at ASC`, []);
         console.log(`📊 [Admin] Found ${users.length} users`);
         res.json({
@@ -69,7 +67,6 @@ const getAllUsers = async (_req, res) => {
                 researchKey: u.research_key,
                 isActive: Boolean(u.is_active),
                 createdAt: u.created_at,
-                lastLogin: u.last_login,
                 taskCount: Number(u.task_count),
                 conversationCount: Number(u.conversation_count),
                 messageCount: Number(u.message_count)
@@ -97,16 +94,13 @@ const getAllConversations = async (_req, res) => {
          c.last_message_at,
          u.id       AS user_id,
          u.username AS username,
-         t.id       AS task_id,
-         t.name     AS task_name,
          COUNT(m.id) AS message_count
        FROM conversations c
        LEFT JOIN users    u ON c.user_id  = u.id
-       LEFT JOIN tasks    t ON c.task_id  = t.id
        LEFT JOIN messages m ON m.conversation_id = c.id
        GROUP BY c.id, c.title, c.ai_model_name, c.ai_model_personality,
                 c.created_at, c.last_message_at,
-                u.id, u.username, t.id, t.name
+                u.id, u.username
        ORDER BY c.last_message_at DESC`, []);
         console.log(`📊 [Admin] Found ${conversations.length} conversations`);
         res.json({
@@ -120,8 +114,6 @@ const getAllConversations = async (_req, res) => {
                 lastMessageAt: c.last_message_at,
                 userId: c.user_id,
                 username: c.username,
-                taskId: c.task_id,
-                taskName: c.task_name,
                 messageCount: Number(c.message_count)
             }))
         });
@@ -167,10 +159,7 @@ const createUser = async (req, res) => {
             return;
         }
         const id = (0, uuid_1.v4)();
-        // Researchers authenticate with their research key, not a password.
-        // Store an empty hash so the column constraint is satisfied.
-        const passwordHash = await bcryptjs_1.default.hash(id, 10);
-        await database_1.default.query('INSERT INTO users (id, username, email, password_hash, research_key, is_active) VALUES (?, ?, ?, ?, ?, TRUE)', [id, username, email, passwordHash, researchKey]);
+        await database_1.default.query('INSERT INTO users (id, username, email, research_key, is_active) VALUES (?, ?, ?, ?, TRUE)', [id, username, email, researchKey]);
         console.log(`✅ [Admin] Created researcher: ${username} (${email})`);
         res.status(201).json({
             success: true,

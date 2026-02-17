@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
-import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import db from '../config/database';
 import { configService } from '../services/config.service';
@@ -51,7 +50,6 @@ export const getAllUsers = async (_req: Request, res: Response): Promise<void> =
          u.research_key,
          u.is_active,
          u.created_at,
-         u.last_login,
          COUNT(DISTINCT t.id)  AS task_count,
          COUNT(DISTINCT c.id)  AS conversation_count,
          COUNT(DISTINCT m.id)  AS message_count
@@ -59,7 +57,7 @@ export const getAllUsers = async (_req: Request, res: Response): Promise<void> =
        LEFT JOIN tasks         t ON t.user_id        = u.id AND t.is_active = TRUE
        LEFT JOIN conversations c ON c.user_id        = u.id
        LEFT JOIN messages      m ON m.conversation_id = c.id
-       GROUP BY u.id, u.username, u.email, u.research_key, u.is_active, u.created_at, u.last_login
+       GROUP BY u.id, u.username, u.email, u.research_key, u.is_active, u.created_at
        ORDER BY u.created_at ASC`,
       []
     );
@@ -75,7 +73,6 @@ export const getAllUsers = async (_req: Request, res: Response): Promise<void> =
         researchKey: u.research_key,
         isActive: Boolean(u.is_active),
         createdAt: u.created_at,
-        lastLogin: u.last_login,
         taskCount: Number(u.task_count),
         conversationCount: Number(u.conversation_count),
         messageCount: Number(u.message_count)
@@ -104,16 +101,13 @@ export const getAllConversations = async (_req: Request, res: Response): Promise
          c.last_message_at,
          u.id       AS user_id,
          u.username AS username,
-         t.id       AS task_id,
-         t.name     AS task_name,
          COUNT(m.id) AS message_count
        FROM conversations c
        LEFT JOIN users    u ON c.user_id  = u.id
-       LEFT JOIN tasks    t ON c.task_id  = t.id
        LEFT JOIN messages m ON m.conversation_id = c.id
        GROUP BY c.id, c.title, c.ai_model_name, c.ai_model_personality,
                 c.created_at, c.last_message_at,
-                u.id, u.username, t.id, t.name
+                u.id, u.username
        ORDER BY c.last_message_at DESC`,
       []
     );
@@ -131,8 +125,6 @@ export const getAllConversations = async (_req: Request, res: Response): Promise
         lastMessageAt: c.last_message_at,
         userId: c.user_id,
         username: c.username,
-        taskId: c.task_id,
-        taskName: c.task_name,
         messageCount: Number(c.message_count)
       }))
     });
@@ -188,13 +180,10 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
     }
 
     const id = uuidv4();
-    // Researchers authenticate with their research key, not a password.
-    // Store an empty hash so the column constraint is satisfied.
-    const passwordHash = await bcrypt.hash(id, 10);
 
     await db.query(
-      'INSERT INTO users (id, username, email, password_hash, research_key, is_active) VALUES (?, ?, ?, ?, ?, TRUE)',
-      [id, username, email, passwordHash, researchKey]
+      'INSERT INTO users (id, username, email, research_key, is_active) VALUES (?, ?, ?, ?, TRUE)',
+      [id, username, email, researchKey]
     );
 
     console.log(`✅ [Admin] Created researcher: ${username} (${email})`);
