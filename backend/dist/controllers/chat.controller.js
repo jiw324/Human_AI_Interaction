@@ -21,13 +21,13 @@ const generateAIResponse = async (userMessage, settings, messageHistory) => {
         // Mark as used to satisfy TypeScript when compile options are strict
         // (left in signature for future extensibility)
         // void aiModel;
-        console.log(`🤖 [Chat] Generating AI response using ${settings?.modelId || 'default model'}...`);
+        console.log(`🤖 [Chat] Generating AI response using ${settings?.defaultModel || 'default model'}...`);
         // Build message history for LiteLLM in the correct format
         const messages = [];
         // Some providers on Bedrock (e.g. DeepSeek, AWS Nova) require conversations
         // to start with a user message – they do not allow a system message as the
         // first role.
-        const modelId = (settings?.modelId || '').toLowerCase();
+        const modelId = (settings?.defaultModel || '').toLowerCase();
         const requiresUserFirst = modelId.includes('deepseek') || // DeepSeek on Bedrock
             modelId.includes('nova') || // AWS Nova models
             modelId.includes('llama3'); // Llama 3 models on Bedrock
@@ -57,7 +57,7 @@ const generateAIResponse = async (userMessage, settings, messageHistory) => {
                     if (requiresUserFirst && systemPrompt && !hasPrependedSystemToFirstUser && !hasUserMessage) {
                         content = `[System Instructions: ${systemPrompt}]\n\n${msg.text}`;
                         hasPrependedSystemToFirstUser = true;
-                        console.log(`📋 [Chat] Prepending System Prompt to first user history message for model ${settings.modelId}`);
+                        console.log(`📋 [Chat] Prepending System Prompt to first user history message for model ${settings.defaultModel}`);
                     }
                     messages.push({
                         role: 'user',
@@ -84,15 +84,21 @@ const generateAIResponse = async (userMessage, settings, messageHistory) => {
         // prepend the system prompt to the current user message.
         if (requiresUserFirst && systemPrompt && !hasUserMessage) {
             currentUserContent = `[System Instructions: ${systemPrompt}]\n\n${userMessage}`;
-            console.log(`📋 [Chat] Prepending System Prompt to current user message for model ${settings.modelId}`);
+            console.log(`📋 [Chat] Prepending System Prompt to current user message for model ${settings.defaultModel}`);
         }
         messages.push({
             role: 'user',
             content: currentUserContent,
         });
         console.log(`📝 [Chat] Message history: ${messages.length} messages`);
-        // Call LiteLLM service
-        const response = await litellm_service_1.liteLLMService.sendChatCompletion(messages, settings?.modelId, settings?.temperature, settings?.maxTokens, settings?.topP, settings?.presencePenalty, settings?.frequencyPenalty);
+        // Call LiteLLM service with default parameters
+        // Use sensible defaults for parameters not in simplified task structure
+        const response = await litellm_service_1.liteLLMService.sendChatCompletion(messages, settings?.defaultModel, 0.7, // temperature - balanced creativity
+        2000, // maxTokens - reasonable response length
+        0.9, // topP - nucleus sampling
+        0, // presencePenalty - no penalty
+        0 // frequencyPenalty - no penalty
+        );
         if (response.success && response.data?.choices?.[0]?.message?.content) {
             const aiMessage = response.data.choices[0].message.content;
             console.log(`✅ [Chat] AI response generated (${aiMessage.length} characters)`);

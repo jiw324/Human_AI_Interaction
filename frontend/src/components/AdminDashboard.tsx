@@ -255,7 +255,6 @@ function ConversationRow({
         </td>
         <td className="admin-cell-bold">{conv.title}</td>
         <td>{conv.username || <span className="admin-muted">—</span>}</td>
-        <td>{conv.taskName || <span className="admin-muted">—</span>}</td>
         <td>{conv.aiModelName || <span className="admin-muted">—</span>}</td>
         <td className="admin-cell-num">{conv.messageCount}</td>
         <td className="admin-cell-date">{new Date(conv.lastMessageAt).toLocaleString()}</td>
@@ -300,8 +299,7 @@ function ConversationsTab({ conversations }: { conversations: AdminConversation[
 
   const filtered = conversations.filter(c =>
     c.title.toLowerCase().includes(search.toLowerCase()) ||
-    (c.username || '').toLowerCase().includes(search.toLowerCase()) ||
-    (c.taskName || '').toLowerCase().includes(search.toLowerCase())
+    (c.username || '').toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -323,7 +321,6 @@ function ConversationsTab({ conversations }: { conversations: AdminConversation[
               <th style={{ width: 32 }} />
               <th>Title</th>
               <th>User</th>
-              <th>Task</th>
               <th>AI Model</th>
               <th>Messages</th>
               <th>Last Message</th>

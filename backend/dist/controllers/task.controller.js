@@ -14,24 +14,9 @@ const transformTaskFromDB = (dbTask) => {
         id: dbTask.id,
         name: dbTask.name,
         settings: {
-            // AI Model Settings
-            personality: dbTask.personality,
-            responseSpeed: parseFloat(dbTask.response_speed),
-            creativity: parseFloat(dbTask.creativity),
-            helpfulness: parseFloat(dbTask.helpfulness),
-            verbosity: parseFloat(dbTask.verbosity),
-            temperature: parseFloat(dbTask.temperature),
-            maxTokens: dbTask.max_tokens,
             systemPrompt: dbTask.system_prompt,
             taskPrompt: dbTask.task_prompt || '',
-            // System Configuration
-            llamaBaseUrl: dbTask.llama_base_url || 'https://llm-proxy.oai-at.org/',
-            llamaServiceUrl: dbTask.llama_service_url || '',
-            llamaApiKey: dbTask.llama_api_key || '',
-            openaiApiKey: dbTask.openai_api_key || '',
-            anthropicApiKey: dbTask.anthropic_api_key || '',
-            defaultModel: dbTask.default_model || 'gpt-4',
-            autoUpdateRobotList: Boolean(dbTask.auto_update_robot_list)
+            defaultModel: dbTask.default_model || ''
         }
     };
 };
@@ -44,9 +29,9 @@ const getAllTasks = async (req, res) => {
         const userId = req.user.id;
         console.log('📤 [Backend] Fetching tasks from database for user:', userId);
         // Query database for user's tasks
-        const tasks = await database_1.default.query(`SELECT * FROM tasks 
-       WHERE user_id = ? 
-       ORDER BY created_at ASC`, [userId]);
+        const tasks = await database_1.default.query(`SELECT * FROM tasks
+       WHERE user_id = ?
+       ORDER BY name ASC`, [userId]);
         console.log(`📊 [Backend] Found ${tasks.length} tasks in database`);
         // Transform to frontend format
         const transformedTasks = tasks.map((t) => transformTaskFromDB(t));
@@ -131,32 +116,14 @@ const createTask = async (req, res) => {
         }
         const taskId = (0, uuid_1.v4)();
         // Insert new task
-        await database_1.default.query(`INSERT INTO tasks (
-        id, user_id, name,
-        personality, response_speed, creativity, helpfulness, verbosity,
-        temperature, max_tokens, system_prompt, task_prompt,
-        llama_base_url, llama_service_url, llama_api_key,
-        openai_api_key, anthropic_api_key, default_model, auto_update_robot_list
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+        await database_1.default.query(`INSERT INTO tasks (id, user_id, name, system_prompt, task_prompt, default_model)
+       VALUES (?, ?, ?, ?, ?, ?)`, [
             taskId,
             userId,
             name,
-            settings.personality || 'friendly',
-            settings.responseSpeed || 1.0,
-            settings.creativity || 0.7,
-            settings.helpfulness || 0.9,
-            settings.verbosity || 0.6,
-            settings.temperature || 0.7,
-            settings.maxTokens || 1000,
             settings.systemPrompt || 'You are a helpful AI assistant.',
-            settings.taskPrompt || 'Please provide specific instructions or context for this task. This prompt will guide the AI in understanding your specific requirements and objectives.',
-            settings.llamaBaseUrl || 'https://llm-proxy.oai-at.org/',
-            settings.llamaServiceUrl || '',
-            settings.llamaApiKey || '',
-            settings.openaiApiKey || '',
-            settings.anthropicApiKey || '',
-            settings.defaultModel || '',
-            settings.autoUpdateRobotList || false
+            settings.taskPrompt || '',
+            settings.defaultModel || ''
         ]);
         // Fetch the created task
         const createdTask = await database_1.default.queryOne(`SELECT * FROM tasks WHERE id = ?`, [taskId]);
@@ -228,34 +195,6 @@ const updateTask = async (req, res) => {
             values.push(name);
         }
         if (settings) {
-            if (settings.personality !== undefined) {
-                updates.push('personality = ?');
-                values.push(settings.personality);
-            }
-            if (settings.responseSpeed !== undefined) {
-                updates.push('response_speed = ?');
-                values.push(settings.responseSpeed);
-            }
-            if (settings.creativity !== undefined) {
-                updates.push('creativity = ?');
-                values.push(settings.creativity);
-            }
-            if (settings.helpfulness !== undefined) {
-                updates.push('helpfulness = ?');
-                values.push(settings.helpfulness);
-            }
-            if (settings.verbosity !== undefined) {
-                updates.push('verbosity = ?');
-                values.push(settings.verbosity);
-            }
-            if (settings.temperature !== undefined) {
-                updates.push('temperature = ?');
-                values.push(settings.temperature);
-            }
-            if (settings.maxTokens !== undefined) {
-                updates.push('max_tokens = ?');
-                values.push(settings.maxTokens);
-            }
             if (settings.systemPrompt !== undefined) {
                 updates.push('system_prompt = ?');
                 values.push(settings.systemPrompt);
@@ -264,33 +203,9 @@ const updateTask = async (req, res) => {
                 updates.push('task_prompt = ?');
                 values.push(settings.taskPrompt);
             }
-            if (settings.llamaBaseUrl !== undefined) {
-                updates.push('llama_base_url = ?');
-                values.push(settings.llamaBaseUrl);
-            }
-            if (settings.llamaServiceUrl !== undefined) {
-                updates.push('llama_service_url = ?');
-                values.push(settings.llamaServiceUrl);
-            }
-            if (settings.llamaApiKey !== undefined) {
-                updates.push('llama_api_key = ?');
-                values.push(settings.llamaApiKey);
-            }
-            if (settings.openaiApiKey !== undefined) {
-                updates.push('openai_api_key = ?');
-                values.push(settings.openaiApiKey);
-            }
-            if (settings.anthropicApiKey !== undefined) {
-                updates.push('anthropic_api_key = ?');
-                values.push(settings.anthropicApiKey);
-            }
             if (settings.defaultModel !== undefined) {
                 updates.push('default_model = ?');
                 values.push(settings.defaultModel);
-            }
-            if (settings.autoUpdateRobotList !== undefined) {
-                updates.push('auto_update_robot_list = ?');
-                values.push(settings.autoUpdateRobotList);
             }
         }
         if (updates.length === 0) {
@@ -338,7 +253,7 @@ const getResearchGroups = async (_req, res) => {
         const groups = await database_1.default.query(`SELECT u.id, u.username,
               COUNT(t.id) AS task_count
        FROM users u
-       LEFT JOIN tasks t ON t.user_id = u.id AND t.is_active = TRUE
+       LEFT JOIN tasks t ON t.user_id = u.id
        WHERE u.is_active = TRUE AND u.research_key IS NOT NULL
        GROUP BY u.id, u.username
        ORDER BY u.username ASC`, []);
@@ -377,7 +292,7 @@ const getTasksByUserId = async (req, res) => {
             res.status(404).json({ success: false, message: 'Research group not found' });
             return;
         }
-        const tasks = await database_1.default.query(`SELECT * FROM tasks WHERE user_id = ? AND is_active = TRUE ORDER BY created_at ASC`, [userId]);
+        const tasks = await database_1.default.query(`SELECT * FROM tasks WHERE user_id = ? ORDER BY name ASC`, [userId]);
         console.log(`📊 [Backend] Found ${tasks.length} tasks for userId: ${userId}`);
         const transformedTasks = tasks.map((t) => transformTaskFromDB(t));
         res.status(200).json({

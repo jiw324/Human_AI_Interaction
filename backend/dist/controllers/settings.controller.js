@@ -29,11 +29,8 @@ const updateSettings = async (req, res, next) => {
             throw new error_middleware_1.AppError('User ID and model name are required', 400);
         }
         // Validate settings
-        if (settings.creativity < 0 || settings.creativity > 100) {
-            throw new error_middleware_1.AppError('Creativity must be between 0 and 100', 400);
-        }
-        if (settings.temperature < 0 || settings.temperature > 2) {
-            throw new error_middleware_1.AppError('Temperature must be between 0 and 2', 400);
+        if (!settings.systemPrompt || settings.systemPrompt.trim() === '') {
+            throw new error_middleware_1.AppError('System prompt is required', 400);
         }
         // Get or create user settings
         const userSettings = settingsStore.get(userId) || {};
