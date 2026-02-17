@@ -5,13 +5,6 @@ import { chatAPI, type Message, type Conversation } from '../services/api';
 import { v4 as uuidv4 } from 'uuid';
 
 interface AISettings {
-  personality: string;
-  responseSpeed: number;
-  creativity: number;
-  helpfulness: number;
-  verbosity: number;
-  temperature: number;
-  maxTokens: number;
   systemPrompt: string;
   taskPrompt: string;
   defaultModel?: string;
@@ -97,7 +90,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation, studyId })
       return {
         name: randomTask.name,
         greeting: randomTask.settings.taskPrompt || `Hello! You are chatting with ${randomTask.name}. How can I help you today?`,
-        personality: randomTask.settings.personality,
+        personality: 'AI Assistant',
         icon: '🤖'
       };
     }
@@ -126,15 +119,9 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation, studyId })
   // Get settings for the selected model
   const currentTask = tasks.find(t => t.name === selectedModel.name);
   const currentSettings = currentTask?.settings || tasks[0]?.settings || {
-    personality: 'friendly',
-    responseSpeed: 1.0,
-    creativity: 0.7,
-    helpfulness: 0.9,
-    verbosity: 0.6,
-    temperature: 0.7,
-    maxTokens: 1000,
     systemPrompt: 'You are a helpful AI assistant.',
-    taskPrompt: ''
+    taskPrompt: '',
+    defaultModel: 'gpt-4o-2024-11-20'
   };
 
   // Get current greeting from task prompt
@@ -272,22 +259,11 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation, studyId })
       description: selectedModel.personality
     };
 
-    // Convert settings to backend format (include LiteLLM parameters)
+    // Convert settings to backend format (simplified)
     const settings = {
-      personality: currentSettings.personality,
-      responseSpeed: currentSettings.responseSpeed,
-      creativity: currentSettings.creativity,
-      helpfulness: currentSettings.helpfulness,
-      verbosity: currentSettings.verbosity,
-      temperature: currentSettings.temperature,
-      maxTokens: currentSettings.maxTokens,
       systemPrompt: currentSettings.systemPrompt,
       taskPrompt: currentSettings.taskPrompt || '',
-      // LiteLLM-specific parameters
-      modelId: currentTask?.settings.defaultModel || 'gpt-4o-2024-11-20',
-      topP: 1.0,
-      presencePenalty: 0.0,
-      frequencyPenalty: 0.0,
+      defaultModel: currentSettings.defaultModel || 'gpt-4o-2024-11-20'
     };
 
     // Call backend API with message history for context

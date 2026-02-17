@@ -16,28 +16,9 @@ export interface Task {
   id: string;
   user_id: string;
   name: string;
-  // AI Model Settings
-  personality: string;
-  response_speed: number;
-  creativity: number;
-  helpfulness: number;
-  verbosity: number;
-  temperature: number;
-  max_tokens: number;
   system_prompt: string;
   task_prompt: string | null;
-  // System Configuration (Task-specific)
-  llama_base_url: string;
-  llama_service_url: string | null;
-  llama_api_key: string | null;
-  openai_api_key: string | null;
-  anthropic_api_key: string | null;
   default_model: string | null;
-  auto_update_robot_list: boolean;
-  // Metadata
-  is_active: boolean;
-  created_at: Date;
-  updated_at: Date;
 }
 
 // ============================================
@@ -52,15 +33,9 @@ export interface CreateUserRequest {
 
 export interface CreateTaskRequest {
   name: string;
-  personality?: string;
-  response_speed?: number;
-  creativity?: number;
-  helpfulness?: number;
-  verbosity?: number;
-  temperature?: number;
-  max_tokens?: number;
   system_prompt: string;
   task_prompt?: string;
+  default_model?: string;
 }
 
 export interface UpdateTaskRequest extends Partial<CreateTaskRequest> {}

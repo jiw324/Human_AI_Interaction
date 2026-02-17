@@ -54,8 +54,8 @@ export const getAllUsers = async (_req: Request, res: Response): Promise<void> =
          COUNT(DISTINCT c.id)  AS conversation_count,
          COUNT(DISTINCT m.id)  AS message_count
        FROM users u
-       LEFT JOIN tasks         t ON t.user_id        = u.id AND t.is_active = TRUE
-       LEFT JOIN conversations c ON c.user_id        = u.id
+       LEFT JOIN tasks         t ON t.user_id = u.id
+       LEFT JOIN conversations c ON c.user_id = u.id
        LEFT JOIN messages      m ON m.conversation_id = c.id
        GROUP BY u.id, u.username, u.email, u.research_key, u.is_active, u.created_at
        ORDER BY u.created_at ASC`,

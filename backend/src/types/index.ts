@@ -15,19 +15,9 @@ export interface AIModel {
 }
 
 export interface AISettings {
-  personality: string;
-  responseSpeed: number;
-  creativity: number;
-  helpfulness: number;
-  verbosity: number;
-  temperature: number;
-  maxTokens: number;
   systemPrompt: string;
   taskPrompt: string;
-  modelId?: string;
-  topP?: number;
-  presencePenalty?: number;
-  frequencyPenalty?: number;
+  defaultModel?: string;
 }
 
 export interface Conversation {

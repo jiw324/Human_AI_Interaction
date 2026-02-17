@@ -164,7 +164,6 @@ function ResearchersTab({
               <th>Conversations</th>
               <th>Messages</th>
               <th>Status</th>
-              <th>Last Login</th>
               <th>Created</th>
               <th>Actions</th>
             </tr>
@@ -184,11 +183,6 @@ function ResearchersTab({
                 <td className="admin-cell-num">{u.messageCount}</td>
                 <td>
                   <span className={`admin-status-dot ${u.isActive ? 'active' : 'inactive'}`} />
-                </td>
-                <td className="admin-cell-date">
-                  {u.lastLogin
-                    ? new Date(u.lastLogin).toLocaleString()
-                    : <span className="admin-muted">never</span>}
                 </td>
                 <td className="admin-cell-date">{new Date(u.createdAt).toLocaleString()}</td>
                 <td>

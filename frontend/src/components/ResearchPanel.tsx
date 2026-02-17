@@ -4,29 +4,9 @@ import './ResearchPanel.css';
 import './ResearchPanel_additions.css';
 
 interface AISettings {
-  // AI Model Settings
-  personality: string;
-  responseSpeed: number;
-  creativity: number;
-  helpfulness: number;
-  verbosity: number;
-  temperature: number;
-  maxTokens: number;
   systemPrompt: string;
   taskPrompt: string;
-  // System Configuration (Task-specific)
-  llamaBaseUrl?: string;
-  llamaServiceUrl?: string;
-  llamaApiKey?: string;
-  openaiApiKey?: string;
-  anthropicApiKey?: string;
-  googleApiKey?: string;
-  mistralApiKey?: string;
-  cohereApiKey?: string;
-  replicateApiKey?: string;
-  huggingfaceApiKey?: string;
   defaultModel?: string;
-  autoUpdateRobotList?: boolean;
 }
 
 interface ResearchPanelProps {
@@ -72,27 +52,9 @@ const systemPromptRef = useRef<HTMLTextAreaElement>(null);
 
   // Get current settings (from editing state or active task, or defaults if no task)
   const defaultSettings: AISettings = {
-    personality: 'friendly',
-    responseSpeed: 1.0,
-    creativity: 0.7,
-    helpfulness: 0.9,
-    verbosity: 0.6,
-    temperature: 0.7,
-    maxTokens: 1000,
     systemPrompt: 'You are a helpful AI assistant. Be friendly, informative, and engaging in your responses.',
-    taskPrompt: 'Please provide specific instructions or context for this task. This prompt will guide the AI in understanding your specific requirements and objectives.',
-    llamaBaseUrl: 'https://litellm.cloud.osu.edu',
-    llamaServiceUrl: '',
-    llamaApiKey: '',
-    openaiApiKey: '',
-    anthropicApiKey: '',
-    googleApiKey: '',
-    mistralApiKey: '',
-    cohereApiKey: '',
-    replicateApiKey: '',
-    huggingfaceApiKey: '',
-    defaultModel: 'gpt-4o-2024-11-20', // Use latest working model
-    autoUpdateRobotList: false
+    taskPrompt: '',
+    defaultModel: 'gpt-4o-2024-11-20'
   };
   
   const currentSettings = editingSettings || (activeTask?.settings) || defaultSettings;
@@ -127,81 +89,39 @@ const systemPromptRef = useRef<HTMLTextAreaElement>(null);
     setEditingSettings(newSettings);
   };
 
-  const handleUpdate = async () => {
-    if (!activeTask) {
-      alert('⚠️ Please create a task first before updating settings.');
-      return;
-    }
-    
-    try {
-      console.log('🔄 Updating task settings to backend...', {
-        taskId: activeTask.id,
-        taskName: activeTask.name,
-        settings: currentSettings
-      });
-      
-      const updatedTask = await tasksAPI.update(activeTask.id, undefined, currentSettings);
-      
-      if (updatedTask) {
-        // Update local state and localStorage
-        const updatedTasks = tasks.map(t =>
-          t.id === activeTaskId ? updatedTask : t
-        );
-        onTasksChange(updatedTasks);
-        
-        // Clear editing state after successful save
-        setEditingSettings(null);
-        
-        // Explicitly save to localStorage
-        localStorage.setItem(tasksCacheKey, JSON.stringify(updatedTasks));
-        console.log('💾 Tasks updated in localStorage');
-        
-        alert('✅ Settings updated successfully!');
-      }
-    } catch (error) {
-      console.error('❌ Failed to update settings:', error);
-      alert('Failed to update settings. Please try again.');
-    }
-  };
-
   const handleUpdateSystemPrompt = async () => {
     if (!activeTask) {
       alert('⚠️ Please create a task first before updating the system prompt.');
       return;
     }
-    
+
     try {
       console.log('🔄 Updating system prompt to backend...', {
         taskId: activeTask.id,
         taskName: activeTask.name,
         systemPrompt: systemPromptDraft
       });
-      
-      const updatedTask = await tasksAPI.update(activeTask.id, undefined, {
-        ...currentSettings,
-        systemPrompt: systemPromptDraft
-      });
-      
+
+      const updatedSettings: AISettings = {
+        systemPrompt: systemPromptDraft,
+        taskPrompt: taskPromptDraft,
+        defaultModel: currentSettings.defaultModel
+      };
+
+      const updatedTask = await tasksAPI.update(activeTask.id, undefined, updatedSettings);
+
       if (updatedTask) {
-        // Update local state and localStorage
         const updatedTasks = tasks.map(t =>
           t.id === activeTaskId ? updatedTask : t
         );
         onTasksChange(updatedTasks);
-        
-        // Clear editing state after successful save
-        setEditingSettings(null);
 
-        // AI-SUGGESTION: Clear local draft now that it's saved.
+        setEditingSettings(null);
         clearPromptDraftForActiveTask();
 
-        // Explicitly save to localStorage
         localStorage.setItem(tasksCacheKey, JSON.stringify(updatedTasks));
         console.log('💾 System prompt updated in localStorage');
 
-        // AI-SUGGESTION: Clear saved draft after successful save so future refreshes show the saved value.
-        localStorage.removeItem(getSystemPromptDraftStorageKey(activeTaskId));
-        
         alert('✅ System Prompt updated successfully!');
       }
     } catch (error) {
@@ -215,39 +135,34 @@ const systemPromptRef = useRef<HTMLTextAreaElement>(null);
       alert('⚠️ Please create a task first before updating the task prompt.');
       return;
     }
-    
+
     try {
       console.log('🔄 Updating task prompt to backend...', {
         taskId: activeTask.id,
         taskName: activeTask.name,
         taskPrompt: taskPromptDraft
       });
-      
-      const updatedTask = await tasksAPI.update(activeTask.id, undefined, {
-        ...currentSettings,
-        taskPrompt: taskPromptDraft
-      });
-      
+
+      const updatedSettings: AISettings = {
+        systemPrompt: systemPromptDraft,
+        taskPrompt: taskPromptDraft,
+        defaultModel: currentSettings.defaultModel
+      };
+
+      const updatedTask = await tasksAPI.update(activeTask.id, undefined, updatedSettings);
+
       if (updatedTask) {
-        // Update local state and localStorage
         const updatedTasks = tasks.map(t =>
           t.id === activeTaskId ? updatedTask : t
         );
         onTasksChange(updatedTasks);
-        
-        // Clear editing state after successful save
-        setEditingSettings(null);
 
-        // AI-SUGGESTION: Clear local draft now that it's saved.
+        setEditingSettings(null);
         clearPromptDraftForActiveTask();
 
-        // Explicitly save to localStorage
         localStorage.setItem(tasksCacheKey, JSON.stringify(updatedTasks));
         console.log('💾 Task prompt updated in localStorage');
 
-        // AI-SUGGESTION: Clear saved draft after successful save so future refreshes show the saved value.
-        localStorage.removeItem(getTaskPromptDraftStorageKey(activeTaskId));
-        
         alert('✅ Task Prompt updated successfully!');
       }
     } catch (error) {
@@ -255,6 +170,47 @@ const systemPromptRef = useRef<HTMLTextAreaElement>(null);
       alert('Failed to update task prompt. Please try again.');
     }
   };
+
+  const handleUpdate = async () => {
+    if (!activeTask) {
+      alert('⚠️ Please create a task first before updating settings.');
+      return;
+    }
+
+    try {
+      console.log('🔄 Updating model settings to backend...', {
+        taskId: activeTask.id,
+        taskName: activeTask.name,
+        defaultModel: currentSettings.defaultModel
+      });
+
+      const updatedSettings: AISettings = {
+        systemPrompt: systemPromptDraft,
+        taskPrompt: taskPromptDraft,
+        defaultModel: currentSettings.defaultModel
+      };
+
+      const updatedTask = await tasksAPI.update(activeTask.id, undefined, updatedSettings);
+
+      if (updatedTask) {
+        const updatedTasks = tasks.map(t =>
+          t.id === activeTaskId ? updatedTask : t
+        );
+        onTasksChange(updatedTasks);
+
+        setEditingSettings(null);
+
+        localStorage.setItem(tasksCacheKey, JSON.stringify(updatedTasks));
+        console.log('💾 Model updated in localStorage');
+
+        alert('✅ Model updated successfully!');
+      }
+    } catch (error) {
+      console.error('❌ Failed to update model:', error);
+      alert('Failed to update model. Please try again.');
+    }
+  };
+
 
   const addTask = async () => {
     // FIRST: Check lock to prevent any duplicate calls
@@ -281,27 +237,9 @@ const systemPromptRef = useRef<HTMLTextAreaElement>(null);
     }
     
     const defaultSettings: AISettings = {
-      personality: 'friendly',
-      responseSpeed: 1.0,
-      creativity: 0.7,
-      helpfulness: 0.9,
-      verbosity: 0.6,
-      temperature: 0.7,
-      maxTokens: 1000,
       systemPrompt: 'You are a helpful AI assistant. Be friendly, informative, and engaging in your responses.',
-      taskPrompt: 'Please provide specific instructions or context for this task. This prompt will guide the AI in understanding your specific requirements and objectives.',
-      llamaBaseUrl: 'https://litellm.cloud.osu.edu',
-      llamaServiceUrl: '',
-      llamaApiKey: '',
-      openaiApiKey: '',
-      anthropicApiKey: '',
-      googleApiKey: '',
-      mistralApiKey: '',
-      cohereApiKey: '',
-      replicateApiKey: '',
-      huggingfaceApiKey: '',
-      defaultModel: 'gpt-4o-2024-11-20',
-      autoUpdateRobotList: false
+      taskPrompt: '',
+      defaultModel: 'gpt-4o-2024-11-20'
     };
     
     try {
@@ -456,55 +394,56 @@ const systemPromptRef = useRef<HTMLTextAreaElement>(null);
         {/* System Prompt and Task Prompt Side by Side */}
         {activeTask && (
           <div className="prompts-container">
-          <div className="config-section prompt-section">
-            <h3 className="section-title">System Prompt</h3>
-            <div className="setting-group full-width">
-              <textarea
-                ref={systemPromptRef}
-                value={systemPromptDraft}
-                onChange={(e) => setSystemPromptDraft(e.target.value)}
-                className="setting-textarea"
-                rows={6}
-                placeholder="Enter the system prompt that defines the AI's behavior..."
-              />
+            <div className="config-section prompt-section">
+              <h3 className="section-title">System Prompt</h3>
+              <div className="setting-group full-width">
+                <textarea
+                  ref={systemPromptRef}
+                  value={systemPromptDraft}
+                  onChange={(e) => setSystemPromptDraft(e.target.value)}
+                  className="setting-textarea"
+                  rows={6}
+                  placeholder="Enter the system prompt that defines the AI's behavior..."
+                />
+              </div>
+              <button
+                type="button"
+                className="btn-update-prompt"
+                onClick={handleUpdateSystemPrompt}
+              >
+                💾 Update System Prompt
+              </button>
             </div>
-            <button
-              type="button"
-              className="btn-update-prompt"
-              onClick={handleUpdateSystemPrompt}
-            >
-              💾 Update System Prompt
-            </button>
-          </div>
 
-          <div className="config-section prompt-section">
-            <h3 className="section-title">Task Prompt</h3>
-            <div className="setting-group full-width">
-              <textarea
-                ref={taskPromptRef}
-                value={taskPromptDraft}
-                onChange={(e) => setTaskPromptDraft(e.target.value)}
-                className="setting-textarea"
-                rows={6}
-                placeholder="Enter the specific task prompt or instructions..."
-              />
+            <div className="config-section prompt-section">
+              <h3 className="section-title">Task Prompt</h3>
+              <div className="setting-group full-width">
+                <textarea
+                  ref={taskPromptRef}
+                  value={taskPromptDraft}
+                  onChange={(e) => setTaskPromptDraft(e.target.value)}
+                  className="setting-textarea"
+                  rows={6}
+                  placeholder="Enter the specific task prompt or instructions..."
+                />
+              </div>
+              <button
+                type="button"
+                className="btn-update-prompt"
+                onClick={handleUpdateTaskPrompt}
+              >
+                💾 Update Task Prompt
+              </button>
             </div>
-            <button
-              type="button"
-              className="btn-update-prompt"
-              onClick={handleUpdateTaskPrompt}
-            >
-              💾 Update Task Prompt
-            </button>
           </div>
-        </div>
         )}
 
         {/* Model Selection */}
         {activeTask && (
           <div className="config-section">
-            <h3 className="section-title">🤖 Select AI Model</h3>
-            <p className="section-description">Choose from any model supported by your LiteLLM configuration</p>
+            <h3 className="section-title">
+              🤖 Select AI Model for <span style={{ color: '#667eea', fontWeight: '700' }}>{activeTask.name}</span>
+            </h3>
             <div className="setting-group">
               <label>AI Model</label>
               <select
@@ -512,7 +451,7 @@ const systemPromptRef = useRef<HTMLTextAreaElement>(null);
                 onChange={(e) => handleSettingChange('defaultModel', e.target.value)}
                 className="setting-select"
               >
-                <optgroup label="🤖 OpenAI Models (OSU LiteLLM)">
+                <optgroup label="🤖 OpenAI Models">
                   <option value="gpt-4o-2024-11-20">GPT-4o</option>
                   <option value="gpt-4o-mini-2024-07-18">GPT-4o Mini</option>
                   <option value="gpt-4.1-2025-04-14">GPT-4.1</option>
@@ -543,10 +482,6 @@ const systemPromptRef = useRef<HTMLTextAreaElement>(null);
                   <option value="deepseek-r1-v1:0">DeepSeek R1</option>
                 </optgroup>
               </select>
-              <small className="form-hint">
-                💡 Tip: Configure API keys above for the models you want to use. 
-                LiteLLM will automatically route requests to the correct provider.
-              </small>
             </div>
             <button
               type="button"

@@ -26,29 +26,9 @@ export interface AIModel {
 }
 
 export interface AISettings {
-  // AI Model Settings
-  personality: string;
-  responseSpeed: number;
-  creativity: number;
-  helpfulness: number;
-  verbosity: number;
-  temperature: number;
-  maxTokens: number;
   systemPrompt: string;
   taskPrompt: string;
-  // System Configuration (Task-specific)
-  llamaBaseUrl?: string;
-  llamaServiceUrl?: string;
-  llamaApiKey?: string;
-  openaiApiKey?: string;
-  anthropicApiKey?: string;
-  googleApiKey?: string;
-  mistralApiKey?: string;
-  cohereApiKey?: string;
-  replicateApiKey?: string;
-  huggingfaceApiKey?: string;
   defaultModel?: string;
-  autoUpdateRobotList?: boolean;
 }
 
 export interface Conversation {
@@ -502,7 +482,6 @@ export interface AdminUser {
   researchKey: string | null;
   isActive: boolean;
   createdAt: string;
-  lastLogin: string | null;
   taskCount: number;
   conversationCount: number;
   messageCount: number;
@@ -517,8 +496,6 @@ export interface AdminConversation {
   lastMessageAt: string;
   userId: string;
   username: string;
-  taskId: string | null;
-  taskName: string | null;
   messageCount: number;
 }
 
