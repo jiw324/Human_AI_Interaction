@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteTask = exports.updateTask = exports.createTask = exports.getTaskById = exports.getAllTasks = void 0;
+exports.deleteTask = exports.getTasksByUserId = exports.getResearchGroups = exports.updateTask = exports.createTask = exports.getTaskById = exports.getAllTasks = void 0;
 const database_1 = __importDefault(require("../config/database"));
 const uuid_1 = require("uuid");
 /**
@@ -41,7 +41,7 @@ const transformTaskFromDB = (dbTask) => {
 const getAllTasks = async (req, res) => {
     try {
         // Get user ID from authenticated request
-        const userId = req.user?.id || 'admin-001'; // Fallback for development
+        const userId = req.user.id;
         console.log('📤 [Backend] Fetching tasks from database for user:', userId);
         // Query database for user's tasks
         const tasks = await database_1.default.query(`SELECT * FROM tasks 
@@ -73,7 +73,7 @@ exports.getAllTasks = getAllTasks;
 const getTaskById = async (req, res) => {
     try {
         const { id } = req.params;
-        const userId = req.user?.id || 'admin-001';
+        const userId = req.user.id;
         console.log(`🔍 [Backend] Fetching task ${id} for user ${userId}`);
         const task = await database_1.default.queryOne(`SELECT * FROM tasks 
        WHERE id = ? AND user_id = ?`, [id, userId]);
@@ -108,7 +108,7 @@ exports.getTaskById = getTaskById;
 const createTask = async (req, res) => {
     try {
         const { name, settings } = req.body;
-        const userId = req.user?.id || 'admin-001';
+        const userId = req.user.id;
         // Validation
         if (!name || !settings) {
             res.status(400).json({
@@ -196,7 +196,7 @@ const updateTask = async (req, res) => {
     try {
         const { id } = req.params;
         const { name, settings } = req.body;
-        const userId = req.user?.id || 'admin-001';
+        const userId = req.user.id;
         console.log('🔄 [Backend] Updating task:', id);
         // Check if task exists and belongs to user
         const existingTask = await database_1.default.queryOne(`SELECT * FROM tasks 
@@ -300,10 +300,11 @@ const updateTask = async (req, res) => {
             });
             return;
         }
-        // Add task ID to values
+        // Add task ID and user ID to the WHERE clause values
         values.push(id);
+        values.push(userId);
         // Execute update
-        await database_1.default.query(`UPDATE tasks SET ${updates.join(', ')} WHERE id = ?`, values);
+        await database_1.default.query(`UPDATE tasks SET ${updates.join(', ')} WHERE id = ? AND user_id = ?`, values);
         // Fetch updated task
         const updatedTask = await database_1.default.queryOne(`SELECT * FROM tasks WHERE id = ?`, [id]);
         if (!updatedTask) {
@@ -328,12 +329,79 @@ const updateTask = async (req, res) => {
 };
 exports.updateTask = updateTask;
 /**
+ * Get all active research groups for the home page directory.
+ * Returns only public fields — research key and credentials are never included.
+ */
+const getResearchGroups = async (_req, res) => {
+    try {
+        console.log('🏠 [Backend] Fetching research groups for home page');
+        const groups = await database_1.default.query(`SELECT u.id, u.username,
+              COUNT(t.id) AS task_count
+       FROM users u
+       LEFT JOIN tasks t ON t.user_id = u.id AND t.is_active = TRUE
+       WHERE u.is_active = TRUE AND u.research_key IS NOT NULL
+       GROUP BY u.id, u.username
+       ORDER BY u.username ASC`, []);
+        console.log(`📊 [Backend] Found ${groups.length} research groups`);
+        res.status(200).json({
+            success: true,
+            data: groups.map((g) => ({
+                id: g.id,
+                name: g.username,
+                taskCount: Number(g.task_count)
+            }))
+        });
+    }
+    catch (error) {
+        console.error('❌ [Backend] Error fetching research groups:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch research groups',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+};
+exports.getResearchGroups = getResearchGroups;
+/**
+ * Get tasks by user ID (public endpoint for participant chat URLs).
+ * The URL contains the user's UUID — not their secret research key.
+ */
+const getTasksByUserId = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        console.log('🔗 [Backend] Fetching tasks for study userId:', userId);
+        // Verify the user exists and is active
+        const user = await database_1.default.queryOne(`SELECT id FROM users WHERE id = ? AND is_active = TRUE`, [userId]);
+        if (!user) {
+            console.log('⚠️ [Backend] User not found for study URL:', userId);
+            res.status(404).json({ success: false, message: 'Research group not found' });
+            return;
+        }
+        const tasks = await database_1.default.query(`SELECT * FROM tasks WHERE user_id = ? AND is_active = TRUE ORDER BY created_at ASC`, [userId]);
+        console.log(`📊 [Backend] Found ${tasks.length} tasks for userId: ${userId}`);
+        const transformedTasks = tasks.map((t) => transformTaskFromDB(t));
+        res.status(200).json({
+            success: true,
+            data: transformedTasks
+        });
+    }
+    catch (error) {
+        console.error('❌ [Backend] Error fetching tasks by userId:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch tasks',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+};
+exports.getTasksByUserId = getTasksByUserId;
+/**
  * Delete a task (soft delete)
  */
 const deleteTask = async (req, res) => {
     try {
         const { id } = req.params;
-        const userId = req.user?.id || 'admin-001';
+        const userId = req.user.id;
         console.log('🗑️ [Backend] Deleting task:', id);
         // Check if task exists and belongs to user
         const task = await database_1.default.queryOne(`SELECT * FROM tasks 
@@ -347,7 +415,7 @@ const deleteTask = async (req, res) => {
         }
         // Allow deleting all tasks (user can have 0 tasks)
         // Hard delete (permanently remove from database)
-        await database_1.default.query(`DELETE FROM tasks WHERE id = ?`, [id]);
+        await database_1.default.query(`DELETE FROM tasks WHERE id = ? AND user_id = ?`, [id, userId]);
         console.log('✅ [Backend] Task permanently deleted from database:', task.name);
         res.status(200).json({
             success: true,

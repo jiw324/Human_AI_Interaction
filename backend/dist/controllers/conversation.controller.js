@@ -6,31 +6,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteConversation = exports.saveConversation = exports.getConversation = exports.getConversations = void 0;
 const error_middleware_1 = require("../middleware/error.middleware");
 const database_1 = __importDefault(require("../config/database"));
-/**
- * Ensure user exists in database (auto-create for device IDs)
- */
-async function ensureUserExists(userId) {
-    try {
-        const existingUser = await database_1.default.queryOne('SELECT id FROM users WHERE id = ?', [userId]);
-        if (!existingUser) {
-            // Auto-create user record for this device
-            // Use full device ID as username to avoid collisions
-            await database_1.default.query(`INSERT INTO users (id, username, email, password_hash, research_key) 
-         VALUES (?, ?, ?, ?, ?)`, [
-                userId,
-                userId, // Use full device ID as username (guaranteed unique)
-                `${userId}@device.local`, // Email: deviceid@device.local
-                '', // No password for device users
-                null // NULL for research_key (empty string would violate UNIQUE constraint)
-            ]);
-            console.log('✨ [Backend] Auto-created user record for device:', userId);
-        }
-    }
-    catch (error) {
-        console.error('⚠️ [Backend] Error ensuring user exists:', error);
-        // Don't throw - let the conversation operation continue
-    }
-}
 const getConversations = async (req, res, next) => {
     try {
         const { userId } = req.params;
@@ -38,24 +13,9 @@ const getConversations = async (req, res, next) => {
             throw new error_middleware_1.AppError('User ID is required', 400);
         }
         console.log('📡 [Backend] Fetching conversations from database for:', userId);
-        // Auto-create user record if device ID doesn't exist
-        await ensureUserExists(userId);
-        // Check if this is an admin user (has research_key, not a device ID)
-        const isAdmin = userId === 'admin-001' || !userId.startsWith('device_');
-        // Fetch conversations from database (metadata only, no messages)
-        // Admin sees ALL conversations, regular users see only their own
-        let dbConversations;
-        if (isAdmin) {
-            console.log('👑 [Backend] Admin user - fetching ALL conversations');
-            dbConversations = await database_1.default.query(`SELECT * FROM conversations 
-         ORDER BY last_message_at DESC`);
-        }
-        else {
-            console.log('📱 [Backend] Device user - fetching device-specific conversations');
-            dbConversations = await database_1.default.query(`SELECT * FROM conversations 
-         WHERE user_id = ? 
-         ORDER BY last_message_at DESC`, [userId]);
-        }
+        const dbConversations = await database_1.default.query(`SELECT * FROM conversations
+       WHERE user_id = ?
+       ORDER BY last_message_at DESC`, [userId]);
         // For each conversation, only fetch message count and last message preview
         const conversations = await Promise.all(dbConversations.map(async (conv) => {
             // Get message count
@@ -108,21 +68,7 @@ const getConversation = async (req, res, next) => {
             throw new error_middleware_1.AppError('User ID and conversation ID are required', 400);
         }
         console.log('🔍 [Backend] Fetching conversation from database:', conversationId);
-        // Check if this is an admin user
-        const isAdmin = userId === 'admin-001' || !userId.startsWith('device_');
-        // Fetch conversation
-        // Admin can fetch any conversation, regular users only their own
-        let conv;
-        if (isAdmin) {
-            console.log('👑 [Backend] Admin user - fetching conversation without user restriction');
-            conv = await database_1.default.queryOne(`SELECT * FROM conversations 
-         WHERE id = ?`, [conversationId]);
-        }
-        else {
-            console.log('📱 [Backend] Device user - fetching device-specific conversation');
-            conv = await database_1.default.queryOne(`SELECT * FROM conversations 
-         WHERE id = ? AND user_id = ?`, [conversationId, userId]);
-        }
+        const conv = await database_1.default.queryOne(`SELECT * FROM conversations WHERE id = ? AND user_id = ?`, [conversationId, userId]);
         if (!conv) {
             throw new error_middleware_1.AppError('Conversation not found', 404);
         }
@@ -183,8 +129,6 @@ const saveConversation = async (req, res, next) => {
             throw new error_middleware_1.AppError('Invalid conversation data', 400);
         }
         console.log('💾 [Backend] Saving conversation to database:', conversation.id);
-        // Auto-create user record if device ID doesn't exist
-        await ensureUserExists(userId);
         // Check if conversation exists
         const existing = await database_1.default.queryOne('SELECT id FROM conversations WHERE id = ?', [conversation.id]);
         if (existing) {
@@ -240,19 +184,7 @@ const deleteConversation = async (req, res, next) => {
             throw new error_middleware_1.AppError('User ID and conversation ID are required', 400);
         }
         console.log('🗑️ [Backend] Deleting conversation from database:', conversationId);
-        // Check if this is an admin user
-        const isAdmin = userId === 'admin-001' || !userId.startsWith('device_');
-        // Delete conversation (messages will cascade delete)
-        // Admin can delete any conversation, regular users only their own
-        let result;
-        if (isAdmin) {
-            console.log('👑 [Backend] Admin user - deleting conversation without user restriction');
-            result = await database_1.default.query('DELETE FROM conversations WHERE id = ?', [conversationId]);
-        }
-        else {
-            console.log('📱 [Backend] Device user - deleting device-specific conversation');
-            result = await database_1.default.query('DELETE FROM conversations WHERE id = ? AND user_id = ?', [conversationId, userId]);
-        }
+        const result = await database_1.default.query('DELETE FROM conversations WHERE id = ? AND user_id = ?', [conversationId, userId]);
         if (result.affectedRows === 0) {
             throw new error_middleware_1.AppError('Conversation not found', 404);
         }

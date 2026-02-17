@@ -14,6 +14,7 @@ const settings_routes_1 = __importDefault(require("./routes/settings.routes"));
 const conversation_routes_1 = __importDefault(require("./routes/conversation.routes"));
 const task_routes_1 = __importDefault(require("./routes/task.routes"));
 const litellm_routes_1 = __importDefault(require("./routes/litellm.routes"));
+const admin_routes_1 = __importDefault(require("./routes/admin.routes"));
 const error_middleware_1 = require("./middleware/error.middleware");
 const database_1 = __importDefault(require("./config/database"));
 const config_service_1 = require("./services/config.service");
@@ -23,14 +24,13 @@ const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3001;
 // Middleware
 app.use((0, helmet_1.default)()); // Security headers
-// CORS - Allow all localhost origins in development
-// and the commresearch-dev host in production (for the deployed frontend).
-const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
+// CORS - In development, localhost is always allowed.
+// In production, set ALLOWED_ORIGINS in the environment (comma-separated).
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').map(o => o.trim()) || [
     'http://localhost:3000',
     'http://localhost:5173',
     'http://127.0.0.1:3000',
     'http://127.0.0.1:5173',
-    'https://commresearch-dev.org.ohio-state.edu'
 ];
 app.use((0, cors_1.default)({
     origin: (origin, callback) => {
@@ -77,6 +77,7 @@ app.use('/api/settings', settings_routes_1.default);
 app.use('/api/conversations', conversation_routes_1.default);
 app.use('/api/tasks', task_routes_1.default);
 app.use('/api/litellm', litellm_routes_1.default);
+app.use('/api/admin', admin_routes_1.default);
 // 404 handler
 app.use((req, res) => {
     res.status(404).json({

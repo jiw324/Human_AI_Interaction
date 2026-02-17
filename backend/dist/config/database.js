@@ -30,7 +30,7 @@ const testConnection = async () => {
         console.log(`📊 Database: ${dbConfig.database}`);
         console.log(`🏠 Host: ${dbConfig.host}:${dbConfig.port}`);
         console.log(`👤 User: ${dbConfig.user}`);
-        console.log(`🔐 Password: ${dbConfig.password ? '***' + dbConfig.password.slice(-4) : 'NOT SET'}`);
+        console.log(`🔐 Password: ${dbConfig.password ? 'SET' : 'NOT SET'}`);
         connection.release();
         return true;
     }

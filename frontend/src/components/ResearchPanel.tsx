@@ -34,14 +34,6 @@ interface ResearchPanelProps {
   onTasksChange: (tasks: Task[]) => void;
 }
 
-type PromptDraft = {
-  systemPrompt: string;
-  taskPrompt: string;
-  updatedAt: number;
-};
-
-type PromptDraftMap = Record<string, PromptDraft>;
-
 const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) => {
   const tasksCacheKey = `research_tasks_${authService.getUserId() ?? 'unknown'}`;
   const [activeTaskId, setActiveTaskId] = useState<string>(tasks[0]?.id || '');
@@ -105,11 +97,6 @@ const systemPromptRef = useRef<HTMLTextAreaElement>(null);
   
   const currentSettings = editingSettings || (activeTask?.settings) || defaultSettings;
 
-  const savedSystemPrompt = activeTask?.settings?.systemPrompt ?? defaultSettings.systemPrompt;
-  const savedTaskPrompt = activeTask?.settings?.taskPrompt ?? defaultSettings.taskPrompt;
-  const isSystemPromptDirty = systemPromptDraft !== savedSystemPrompt;
-  const isTaskPromptDirty = taskPromptDraft !== savedTaskPrompt;
-
   // AI-SUGGESTION: Persist prompt drafts per-task so refreshes (or background updates) don't wipe in-progress edits.
   const getSystemPromptDraftStorageKey = (taskId: string) => `research_prompt_draft:${taskId}:system`;
   const getTaskPromptDraftStorageKey = (taskId: string) => `research_prompt_draft:${taskId}:task`;
@@ -117,15 +104,6 @@ const systemPromptRef = useRef<HTMLTextAreaElement>(null);
   const clearPromptDraftForActiveTask = () => {
     localStorage.removeItem(getSystemPromptDraftStorageKey(activeTaskId));
     localStorage.removeItem(getTaskPromptDraftStorageKey(activeTaskId));
-  };
-
-  const upsertPromptDraftForActiveTask = (draft: Partial<{ systemPrompt: string; taskPrompt: string }>) => {
-    if (draft.systemPrompt !== undefined) {
-      localStorage.setItem(getSystemPromptDraftStorageKey(activeTaskId), draft.systemPrompt);
-    }
-    if (draft.taskPrompt !== undefined) {
-      localStorage.setItem(getTaskPromptDraftStorageKey(activeTaskId), draft.taskPrompt);
-    }
   };
 
   // Keep prompt drafts in sync with the active task's settings,

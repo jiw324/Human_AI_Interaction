@@ -11,7 +11,6 @@ const login = async (req, res, next) => {
     try {
         const { researchKey } = req.body;
         console.log('🔐 [Backend] Login attempt received');
-        console.log(`🔑 [Backend] Research key provided: ${researchKey}`);
         if (!researchKey) {
             console.log('❌ [Backend] No research key provided');
             throw new error_middleware_1.AppError('Research key is required', 400);
