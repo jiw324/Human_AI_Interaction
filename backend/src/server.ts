@@ -18,7 +18,7 @@ import { configService } from './services/config.service';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = Number(process.env.PORT) || 3001;
 
 // Middleware
 app.use(helmet()); // Security headers
@@ -82,7 +82,7 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/litellm', litellmRoutes);
-app.use('/api/admin', adminRoutes);
+app.use('/api/panel', adminRoutes);
 
 // 404 handler
 app.use((req, res) => {
@@ -96,7 +96,7 @@ app.use((req, res) => {
 app.use(errorHandler);
 
 // Start server
-app.listen(PORT, async () => {
+app.listen(PORT, '::', async () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 API: http://localhost:${PORT}/api`);

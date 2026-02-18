@@ -4,7 +4,9 @@
       "Bash(node:*)",
       "Bash(npm --version:*)",
       "Bash(curl:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(python3:*)",
+      "Bash(npx tsc:*)"
     ]
   }
 }
