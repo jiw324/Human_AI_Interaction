@@ -91,7 +91,7 @@ class ConfigService {
       },
       {
         key: 'ADMIN_KEY',
-        value: '',
+        value: process.env.ADMIN_KEY || '',
         description: 'Admin panel access key — set this to a strong secret before use',
       },
     ];

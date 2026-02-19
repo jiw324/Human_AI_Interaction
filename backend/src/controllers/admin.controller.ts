@@ -11,11 +11,11 @@ export const adminLogin = async (req: Request, res: Response): Promise<void> => 
   try {
     const { adminKey } = req.body;
 
-    // Read admin key from the configs table (never from .env)
-    const expectedKey = await configService.getValueByKey('ADMIN_KEY');
+    // Read admin key from env first, then fall back to configs table
+    const expectedKey = process.env.ADMIN_KEY || await configService.getValueByKey('ADMIN_KEY');
 
     if (!expectedKey) {
-      res.status(503).json({ success: false, message: 'Admin access not configured. Set ADMIN_KEY in the configs table.' });
+      res.status(503).json({ success: false, message: 'Admin access not configured. Set ADMIN_KEY in environment or configs table.' });
       return;
     }
 

@@ -292,7 +292,7 @@ const systemPromptRef = useRef<HTMLTextAreaElement>(null);
           onTasksChange(newTasks);
           
           // Save to localStorage
-          localStorage.setItem('research_tasks', JSON.stringify(newTasks));
+          localStorage.setItem(tasksCacheKey, JSON.stringify(newTasks));
           console.log('💾 Task deletion saved to localStorage');
           
           if (activeTaskId === taskId) {

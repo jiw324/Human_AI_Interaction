@@ -130,7 +130,7 @@ class LiteLLMService {
         console.warn(`⚠️  No API key configured for ${isDirectOpenAI ? 'OpenAI' : 'LiteLLM'}`);
         console.warn(`⚠️  Attempting request without authentication (may work for public proxies)`);
       } else {
-        console.log(`🔑 Using API key: ${apiKey.substring(0, 10)}...`);
+        console.log(`🔑 Using API key: ***configured***`);
       }
 
       const headers: Record<string, string> = {

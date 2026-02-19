@@ -14,10 +14,10 @@ const config_service_1 = require("../services/config.service");
 const adminLogin = async (req, res) => {
     try {
         const { adminKey } = req.body;
-        // Read admin key from the configs table (never from .env)
-        const expectedKey = await config_service_1.configService.getValueByKey('ADMIN_KEY');
+        // Read admin key from env first, then fall back to configs table
+        const expectedKey = process.env.ADMIN_KEY || await config_service_1.configService.getValueByKey('ADMIN_KEY');
         if (!expectedKey) {
-            res.status(503).json({ success: false, message: 'Admin access not configured. Set ADMIN_KEY in the configs table.' });
+            res.status(503).json({ success: false, message: 'Admin access not configured. Set ADMIN_KEY in environment or configs table.' });
             return;
         }
         if (!adminKey || adminKey !== expectedKey) {
