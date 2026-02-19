@@ -160,10 +160,23 @@ const createUser = async (req, res) => {
         }
         const id = (0, uuid_1.v4)();
         await database_1.default.query('INSERT INTO users (id, username, email, research_key, is_active) VALUES (?, ?, ?, ?, TRUE)', [id, username, email, researchKey]);
+        const created = await database_1.default.queryOne(`SELECT u.id, u.username, u.email, u.research_key, u.is_active, u.created_at,
+              0 AS task_count, 0 AS conversation_count, 0 AS message_count
+       FROM users u WHERE u.id = ?`, [id]);
         console.log(`✅ [Admin] Created researcher: ${username} (${email})`);
         res.status(201).json({
             success: true,
-            data: { id, username, email, researchKey, isActive: true }
+            data: {
+                id: created.id,
+                username: created.username,
+                email: created.email,
+                researchKey: created.research_key,
+                isActive: Boolean(created.is_active),
+                createdAt: created.created_at,
+                taskCount: 0,
+                conversationCount: 0,
+                messageCount: 0
+            }
         });
     }
     catch (error) {

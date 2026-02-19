@@ -506,17 +506,16 @@ export interface AdminMessage {
   timestamp: string;
 }
 
-// Admin token is intentionally kept in memory only — cleared on every page load,
-// so admin must log in again on every visit.
+// Admin token stored in sessionStorage — survives page refresh within the same
+// browser session, but is cleared when the tab/browser is closed.
 // Also purge any leftover key from older localStorage-based versions.
 localStorage.removeItem('adminToken');
-let _adminToken: string | null = null;
 
 export const adminAuthService = {
-  getToken: (): string | null => _adminToken,
-  setToken: (token: string): void => { _adminToken = token; },
-  clearToken: (): void => { _adminToken = null; },
-  isAuthenticated: (): boolean => _adminToken !== null,
+  getToken: (): string | null => sessionStorage.getItem('adminToken'),
+  setToken: (token: string): void => { sessionStorage.setItem('adminToken', token); },
+  clearToken: (): void => { sessionStorage.removeItem('adminToken'); },
+  isAuthenticated: (): boolean => !!sessionStorage.getItem('adminToken'),
   /** Returns a stable admin ID — always 'admin' for the single admin account. */
   getAdminId: (): string => 'admin'
 };

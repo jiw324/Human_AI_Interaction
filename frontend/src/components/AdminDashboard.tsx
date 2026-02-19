@@ -124,26 +124,34 @@ function ResearchersTab({
 }) {
   const [confirmDelete, setConfirmDelete] = useState<AdminUser | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState('');
 
   const handleDelete = async (user: AdminUser) => {
+    setActionError('');
     const result = await adminAPI.deleteUser(user.id);
     if (result.success) {
       onUsersChange(users.filter(u => u.id !== user.id));
+    } else {
+      setActionError(result.message || 'Failed to delete researcher');
     }
     setConfirmDelete(null);
   };
 
   const handleToggle = async (user: AdminUser) => {
+    setActionError('');
     setTogglingId(user.id);
     const result = await adminAPI.toggleUserStatus(user.id, !user.isActive);
     if (result.success) {
       onUsersChange(users.map(u => u.id === user.id ? { ...u, isActive: !u.isActive } : u));
+    } else {
+      setActionError(result.message || 'Failed to update status');
     }
     setTogglingId(null);
   };
 
   return (
     <div className="admin-tab-content">
+      {actionError && <p className="admin-create-error" style={{ marginBottom: 8 }}>{actionError}</p>}
       <div className="admin-create-bar">
         <p className="admin-count" style={{ margin: 0 }}>
           {users.length} researcher{users.length !== 1 ? 's' : ''}
@@ -351,14 +359,20 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [conversations, setConversations] = useState<AdminConversation[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState('');
 
   // Hooks must all be declared before any conditional returns
   const loadData = useCallback(async () => {
     setLoading(true);
+    setLoadError('');
     const [u, c] = await Promise.all([
       adminAPI.getUsers(),
       adminAPI.getConversations()
     ]);
+    if (u.length === 0) {
+      // May indicate auth failure or server issue — show a hint
+      setLoadError('No researchers loaded. If this is unexpected, try logging out and back in.');
+    }
     setUsers(u);
     setConversations(c);
     setLoading(false);
@@ -407,6 +421,7 @@ export default function AdminDashboard() {
         </button>
       </div>
 
+      {loadError && <p className="admin-create-error" style={{ margin: '8px 0' }}>{loadError}</p>}
       {loading ? (
         <div className="admin-loading">Loading data…</div>
       ) : tab === 'researchers' ? (
