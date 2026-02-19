@@ -82,7 +82,7 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/litellm', litellmRoutes);
-app.use('/api/panel', adminRoutes);
+app.use('/api/admin', adminRoutes);
 
 // 404 handler
 app.use((req, res) => {

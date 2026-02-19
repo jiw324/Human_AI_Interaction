@@ -528,13 +528,13 @@ async function fetchAdmin(endpoint: string, options: RequestInit = {}): Promise<
     ...(options.headers as Record<string, string> | undefined || {})
   };
   if (token) headers.Authorization = `Bearer ${token}`;
-  return fetch(`${API_BASE_URL}/panel${endpoint}`, { ...options, headers });
+  return fetch(`${API_BASE_URL}/admin${endpoint}`, { ...options, headers });
 }
 
 export const adminAPI = {
   login: async (adminKey: string): Promise<{ success: boolean; message?: string }> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/panel/login`, {
+      const response = await fetch(`${API_BASE_URL}/admin/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ adminKey })

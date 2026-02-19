@@ -133,6 +133,7 @@ function App() {
   const backendStatus = healthStatus.isOnline ? 'online' : 'offline';
 
   // Load tasks only when logged in — GET /api/tasks now requires auth
+  const loggedInUserId = isLoggedIn ? authService.getUserId() : null;
   useEffect(() => {
     const loadTasks = async () => {
       if (backendStatus === 'online' && isLoggedIn) {
@@ -158,7 +159,7 @@ function App() {
       }
     };
     loadTasks();
-  }, [backendStatus, isLoggedIn]);
+  }, [backendStatus, isLoggedIn, loggedInUserId]);
 
   // Save tasks to localStorage whenever they change
   useEffect(() => {
@@ -235,6 +236,7 @@ function App() {
   }, []);
 
   const handleLogin = (_researchKey: string) => {
+    setTasks([]);
     setIsLoggedIn(true);
     localStorage.setItem('researchLoggedIn', 'true');
     // JWT is now stored by authAPI.login(); getUserId() reads it
