@@ -12,6 +12,9 @@ export default defineConfig(({ mode }) => {
   return {
     base,
     plugins: [react()],
+    build: {
+      assetsDir: ''  // Output JS/CSS directly to dist/ root, not dist/assets/
+    },
     server: {
       port: 3000,
       host: true

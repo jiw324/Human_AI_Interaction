@@ -79,7 +79,7 @@ async function fetchAPI(
   options: RequestInit = {}
 ): Promise<Response> {
   const token = authService.getToken();
-  
+
   // Use a simple string map for headers to avoid type issues when adding Authorization
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -92,7 +92,8 @@ async function fetchAPI(
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
-    headers
+    headers,
+    cache: 'no-store'
   });
 
   return response;
@@ -527,7 +528,7 @@ async function fetchAdmin(endpoint: string, options: RequestInit = {}): Promise<
     ...(options.headers as Record<string, string> | undefined || {})
   };
   if (token) headers.Authorization = `Bearer ${token}`;
-  return fetch(`${API_BASE_URL}/admin${endpoint}`, { ...options, headers });
+  return fetch(`${API_BASE_URL}/admin${endpoint}`, { ...options, headers, cache: 'no-store' });
 }
 
 export const adminAPI = {
