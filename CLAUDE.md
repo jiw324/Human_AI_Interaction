@@ -237,3 +237,92 @@ All tables use UUID primary keys (string type) and `created_at`/`updated_at` tim
 3. **MySQL charset**: schema uses `utf8mb4` — ensure MySQL server supports it
 4. **Frontend API URL**: defaults to `http://localhost:5000/api`; override with `VITE_API_URL` for other environments
 5. **JWT secret**: must match between server restarts; store securely
+
+---
+
+## Production Deployment Snapshot (Working State — 2026-02-21)
+
+This section documents the exact configuration of the last known-working live deployment so it can be restored if needed.
+
+**Production URL:** `https://commresearch-dev.org.ohio-state.edu`
+
+### Frontend — `frontend/.env` (for production build)
+```
+VITE_BASE=/static/
+VITE_API_URL=https://commresearch-dev.org.ohio-state.edu/api
+```
+
+### Frontend — `frontend/public/.htaccess` and `frontend/dist/.htaccess`
+```
+RewriteEngine On
+RewriteBase /static/
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^ index.html [QSA,L]
+```
+
+### Frontend Build Output (`frontend/dist/`)
+- JS bundle: `index-CtKFdbPf.js` (in `dist/` root, not a subdirectory)
+- CSS: `index-D2fUopbq.css`
+- Icon: `vite.svg`
+- `index.html` script/link tags reference `/static/index-*.js` and `/static/index-*.css`
+
+> **Note:** Vite config sets `build.assetsDir: ''` so assets output to `dist/` root. The server must serve the `dist/` folder under the `/static/` path.
+
+### Backend — `backend/.env` (for production)
+```
+NODE_ENV=production
+PORT=3000
+DB_HOST=webdb1.service.ohio-state.edu
+DB_PORT=3306
+DB_NAME=human_ai_interaction
+DB_USER=wang.18804
+DB_PASSWORD=<see secure storage>
+JWT_SECRET=<see secure storage>
+ALLOWED_ORIGINS=https://commresearch-dev.org.ohio-state.edu
+LITELLM_API_BASE=https://litellm.cloud.osu.edu
+LITELLM_API_KEY=<see secure storage>
+ADMIN_KEY=<see secure storage>
+```
+
+> **Sensitive values** (DB_PASSWORD, JWT_SECRET, LITELLM_API_KEY, ADMIN_KEY) are not stored here — check your local `backend/.env` or secure password manager.
+
+### Key Version Pins (working state)
+| Package | Version |
+|---------|---------|
+| React | 19.1.1 |
+| React Router | 7.9.5 |
+| Vite | 7.1.7 |
+| TypeScript (frontend) | ~5.9.3 |
+| Express | 4.18.2 |
+| TypeScript (backend) | 5.3.3 |
+| mysql2 | 3.15.3 |
+| Node.js (recommended) | 20 |
+
+### How to Restore to This State
+
+```bash
+# 1. Restore frontend env
+#    Create frontend/.env with VITE_BASE and VITE_API_URL as shown above
+
+# 2. Restore backend env
+#    Create backend/.env with all values above (fill in secrets from secure storage)
+
+# 3. Rebuild frontend
+cd frontend && npm install && npm run build
+#    This regenerates dist/ with /static/ base path baked in
+
+# 4. Rebuild backend
+cd backend && npm install && npm run build
+
+# 5. Upload frontend/dist/* to the server's /static/ directory
+# 6. Restart backend (node dist/server.js) — listens on PORT=3000
+
+# 7. Verify: https://commresearch-dev.org.ohio-state.edu
+```
+
+### Architecture on the Live Server
+- **Backend** runs as a Node.js process on `PORT=3000` (behind a reverse proxy)
+- **Frontend** static files served from the `/static/` subpath by the web server
+- **Database** on OSU web server: `webdb1.service.ohio-state.edu`
+- **LiteLLM Proxy**: `https://litellm.cloud.osu.edu` (OSU-hosted; no local instance needed in production)
+- **Git commit at deployment**: `89575a1` (branch: `main`)
