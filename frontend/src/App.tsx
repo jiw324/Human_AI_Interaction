@@ -266,12 +266,6 @@ function App() {
   return (
     <div className="app">
       <div className="simple-nav">
-        <NavLink
-          to="/"
-          className={({ isActive }) => `nav-btn ${isActive ? 'active' : ''}`}
-        >
-          Home
-        </NavLink>
         {isLoggedIn && currentUserId ? (
           <>
             <NavLink
@@ -302,15 +296,6 @@ function App() {
             Research Login
           </NavLink>
         )}
-        <div
-          className="backend-status"
-          title={`Backend: ${backendStatus}${healthStatus.lastChecked ? `\nLast checked: ${healthStatus.lastChecked.toLocaleTimeString()}` : ''}`}
-        >
-          <span className={`status-dot ${backendStatus}`}></span>
-          <span className="status-text">
-            {backendStatus === 'online' ? 'Backend Online' : 'Backend Offline'}
-          </span>
-        </div>
       </div>
 
       <div className="main-content">
