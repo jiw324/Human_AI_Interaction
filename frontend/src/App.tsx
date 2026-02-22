@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Routes, Route, NavLink, useNavigate, Navigate, useParams } from 'react-router-dom'
+import { Routes, Route, NavLink, useNavigate, Navigate, useParams, useLocation } from 'react-router-dom'
 import ChatBox from './components/ChatBox'
 import HomePage from './components/HomePage'
 import ResearchPanel from './components/ResearchPanel'
@@ -129,37 +129,50 @@ function App() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
 
-  const healthStatus = useBackendHealth();
-  const backendStatus = healthStatus.isOnline ? 'online' : 'offline';
+  useBackendHealth();
+
+  const location = useLocation();
 
   // Load tasks only when logged in — GET /api/tasks now requires auth
   const loggedInUserId = isLoggedIn ? authService.getUserId() : null;
-  useEffect(() => {
-    const loadTasks = async () => {
-      if (backendStatus === 'online' && isLoggedIn) {
-        const userId = authService.getUserId();
-        const cacheKey = userId ? `research_tasks_${userId}` : null;
-        console.log('📡 Loading tasks for logged-in researcher...');
 
-        if (cacheKey) {
-          const cachedTasks = localStorage.getItem(cacheKey);
-          if (cachedTasks) {
-            try {
-              setTasks(JSON.parse(cachedTasks));
-            } catch (_) {}
-          }
-        }
+  const fetchAndSetTasks = useCallback(async () => {
+    const userId = authService.getUserId();
+    const cacheKey = userId ? `research_tasks_${userId}` : null;
+    console.log('📡 Loading tasks for logged-in researcher...');
 
-        const fetchedTasks = await tasksAPI.getAll();
-        setTasks(fetchedTasks);
-        if (cacheKey) {
-          localStorage.setItem(cacheKey, JSON.stringify(fetchedTasks));
-        }
-        console.log('✨ Tasks loaded from backend');
+    // Show cached tasks immediately while the fresh fetch is in flight
+    if (cacheKey) {
+      const cachedTasks = localStorage.getItem(cacheKey);
+      if (cachedTasks) {
+        try { setTasks(JSON.parse(cachedTasks)); } catch (_) {}
       }
-    };
-    loadTasks();
-  }, [backendStatus, isLoggedIn, loggedInUserId]);
+    }
+
+    const fetchedTasks = await tasksAPI.getAll();
+    // Only update state if the fetch succeeded (null = error — keep cache visible)
+    if (fetchedTasks !== null) {
+      setTasks(fetchedTasks);
+      if (cacheKey) {
+        localStorage.setItem(cacheKey, JSON.stringify(fetchedTasks));
+      }
+      console.log('✨ Tasks loaded from backend');
+    } else {
+      console.warn('⚠️ Task fetch failed — showing cached tasks');
+    }
+  }, []);
+
+  // Initial load on mount / after login
+  useEffect(() => {
+    if (isLoggedIn) fetchAndSetTasks();
+  }, [isLoggedIn, loggedInUserId, fetchAndSetTasks]);
+
+  // Re-fetch whenever the user navigates to the research panel
+  useEffect(() => {
+    if (isLoggedIn && location.pathname.startsWith('/research/')) {
+      fetchAndSetTasks();
+    }
+  }, [location.pathname, isLoggedIn, fetchAndSetTasks]);
 
   // Save tasks to localStorage whenever they change
   useEffect(() => {

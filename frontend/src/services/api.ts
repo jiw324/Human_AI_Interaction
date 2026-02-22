@@ -372,7 +372,7 @@ export const tasksAPI = {
     }
   },
 
-  getAll: async (): Promise<Task[]> => {
+  getAll: async (): Promise<Task[] | null> => {
     try {
       console.log('📡 Fetching tasks from backend...');
       const response = await fetchAPI('/tasks');
@@ -384,10 +384,10 @@ export const tasksAPI = {
         return data.data;
       }
       console.warn('⚠️ Backend returned unsuccessful response');
-      return [];
+      return null;
     } catch (error) {
       console.error('❌ Get tasks error:', error);
-      return [];
+      return null;
     }
   },
 
