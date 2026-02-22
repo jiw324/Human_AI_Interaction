@@ -226,6 +226,8 @@
   font-size: 16px;
   font-family: inherit;
   transition: all 0.3s ease;
+  background: white;
+  color: #2c3e50;
 }
 
 .task-input:focus {
@@ -349,10 +351,17 @@
 }
 
 .prompts-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.names-container {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
-  margin-bottom: 30px;
+  margin-bottom: 0;
 }
 
 .config-section {

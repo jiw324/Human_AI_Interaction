@@ -12,7 +12,8 @@ const transformTaskFromDB = (dbTask: any) => {
     settings: {
       systemPrompt: dbTask.system_prompt,
       taskPrompt: dbTask.task_prompt || '',
-      defaultModel: dbTask.default_model || ''
+      defaultModel: dbTask.default_model || '',
+      chatbotName: dbTask.chatbot_name || ''
     }
   };
 };
@@ -140,15 +141,16 @@ export const createTask = async (req: Request, res: Response): Promise<void> => 
 
     // Insert new task
     await db.query(
-      `INSERT INTO tasks (id, user_id, name, system_prompt, task_prompt, default_model)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO tasks (id, user_id, name, system_prompt, task_prompt, default_model, chatbot_name)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
         taskId,
         userId,
         name,
         settings.systemPrompt || 'You are a helpful AI assistant.',
         settings.taskPrompt || '',
-        settings.defaultModel || ''
+        settings.defaultModel || '',
+        settings.chatbotName || ''
       ]
     );
     
@@ -255,6 +257,10 @@ export const updateTask = async (req: Request, res: Response): Promise<void> => 
       if (settings.defaultModel !== undefined) {
         updates.push('default_model = ?');
         values.push(settings.defaultModel);
+      }
+      if (settings.chatbotName !== undefined) {
+        updates.push('chatbot_name = ?');
+        values.push(settings.chatbotName);
       }
     }
     

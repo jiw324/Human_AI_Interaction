@@ -30,6 +30,7 @@ CREATE TABLE tasks (
     system_prompt TEXT NOT NULL,
     task_prompt TEXT,
     default_model VARCHAR(255),
+    chatbot_name VARCHAR(255),
 
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     INDEX idx_user_id (user_id),

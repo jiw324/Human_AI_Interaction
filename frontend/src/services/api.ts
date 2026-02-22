@@ -29,6 +29,7 @@ export interface AISettings {
   systemPrompt: string;
   taskPrompt: string;
   defaultModel?: string;
+  chatbotName?: string;
 }
 
 export interface Conversation {

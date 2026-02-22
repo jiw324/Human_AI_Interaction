@@ -8,6 +8,7 @@ interface AISettings {
   systemPrompt: string;
   taskPrompt: string;
   defaultModel?: string;
+  chatbotName?: string;
 }
 
 interface Task {
@@ -336,7 +337,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation, studyId })
           <div className="avatar-icon">{selectedModel.icon}</div>
         </div>
         <div className="chat-title">
-          <h3>AI companion</h3>
+          <h3>{currentSettings.chatbotName || 'AI Companion'}</h3>
         </div>
       </div>
       

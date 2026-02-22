@@ -7,6 +7,7 @@ interface AISettings {
   systemPrompt: string;
   taskPrompt: string;
   defaultModel?: string;
+  chatbotName?: string;
 }
 
 interface ResearchPanelProps {
@@ -25,6 +26,8 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
   // Dedicated draft state for prompts so they don't reset while typing
   const [systemPromptDraft, setSystemPromptDraft] = useState<string>('');
   const [taskPromptDraft, setTaskPromptDraft] = useState<string>('');
+  const [chatbotNameDraft, setChatbotNameDraft] = useState<string>('');
+  const [taskNameDraft, setTaskNameDraft] = useState<string>('');
 const systemPromptRef = useRef<HTMLTextAreaElement>(null);
   const taskPromptRef = useRef<HTMLTextAreaElement>(null);
   
@@ -74,9 +77,13 @@ const systemPromptRef = useRef<HTMLTextAreaElement>(null);
     if (activeTask?.settings) {
       setSystemPromptDraft(activeTask.settings.systemPrompt);
       setTaskPromptDraft(activeTask.settings.taskPrompt);
+      setChatbotNameDraft(activeTask.settings.chatbotName || '');
+      setTaskNameDraft(activeTask.name);
     } else {
       setSystemPromptDraft(defaultSettings.systemPrompt);
       setTaskPromptDraft(defaultSettings.taskPrompt);
+      setChatbotNameDraft('');
+      setTaskNameDraft('');
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTaskId]);
@@ -105,7 +112,8 @@ const systemPromptRef = useRef<HTMLTextAreaElement>(null);
       const updatedSettings: AISettings = {
         systemPrompt: systemPromptDraft,
         taskPrompt: taskPromptDraft,
-        defaultModel: currentSettings.defaultModel
+        defaultModel: currentSettings.defaultModel,
+        chatbotName: chatbotNameDraft
       };
 
       const updatedTask = await tasksAPI.update(activeTask.id, undefined, updatedSettings);
@@ -146,7 +154,8 @@ const systemPromptRef = useRef<HTMLTextAreaElement>(null);
       const updatedSettings: AISettings = {
         systemPrompt: systemPromptDraft,
         taskPrompt: taskPromptDraft,
-        defaultModel: currentSettings.defaultModel
+        defaultModel: currentSettings.defaultModel,
+        chatbotName: chatbotNameDraft
       };
 
       const updatedTask = await tasksAPI.update(activeTask.id, undefined, updatedSettings);
@@ -187,7 +196,8 @@ const systemPromptRef = useRef<HTMLTextAreaElement>(null);
       const updatedSettings: AISettings = {
         systemPrompt: systemPromptDraft,
         taskPrompt: taskPromptDraft,
-        defaultModel: currentSettings.defaultModel
+        defaultModel: currentSettings.defaultModel,
+        chatbotName: chatbotNameDraft
       };
 
       const updatedTask = await tasksAPI.update(activeTask.id, undefined, updatedSettings);
@@ -211,6 +221,58 @@ const systemPromptRef = useRef<HTMLTextAreaElement>(null);
     }
   };
 
+
+  const handleUpdateTaskName = async () => {
+    if (!activeTask) return;
+    const trimmed = taskNameDraft.trim();
+    if (!trimmed) {
+      alert('Task name cannot be empty.');
+      return;
+    }
+    if (trimmed === activeTask.name) return;
+    if (tasks.some(t => t.name === trimmed && t.id !== activeTask.id)) {
+      alert('A task with that name already exists.');
+      return;
+    }
+    try {
+      const updatedTask = await tasksAPI.update(activeTask.id, trimmed, undefined);
+      if (updatedTask) {
+        const updatedTasks = tasks.map(t => t.id === activeTaskId ? updatedTask : t);
+        onTasksChange(updatedTasks);
+        localStorage.setItem(tasksCacheKey, JSON.stringify(updatedTasks));
+        alert('✅ Task name updated successfully!');
+      }
+    } catch (error) {
+      console.error('❌ Failed to update task name:', error);
+      alert('Failed to update task name. Please try again.');
+    }
+  };
+
+  const handleUpdateChatbotName = async () => {
+    if (!activeTask) {
+      alert('⚠️ Please create a task first before updating the chatbot name.');
+      return;
+    }
+    try {
+      const updatedSettings: AISettings = {
+        systemPrompt: systemPromptDraft,
+        taskPrompt: taskPromptDraft,
+        defaultModel: currentSettings.defaultModel,
+        chatbotName: chatbotNameDraft
+      };
+      const updatedTask = await tasksAPI.update(activeTask.id, undefined, updatedSettings);
+      if (updatedTask) {
+        const updatedTasks = tasks.map(t => t.id === activeTaskId ? updatedTask : t);
+        onTasksChange(updatedTasks);
+        setEditingSettings(null);
+        localStorage.setItem(tasksCacheKey, JSON.stringify(updatedTasks));
+        alert('✅ Chatbot name updated successfully!');
+      }
+    } catch (error) {
+      console.error('❌ Failed to update chatbot name:', error);
+      alert('Failed to update chatbot name. Please try again.');
+    }
+  };
 
   const addTask = async () => {
     // FIRST: Check lock to prevent any duplicate calls
@@ -391,7 +453,53 @@ const systemPromptRef = useRef<HTMLTextAreaElement>(null);
           </div>
         )}
 
-        {/* System Prompt and Task Prompt Side by Side */}
+        {/* Task Name + Chatbot Name side by side */}
+        {activeTask && (
+          <div className="names-container">
+            <div className="config-section">
+              <h3 className="section-title">Task Name</h3>
+              <div className="setting-group full-width">
+                <input
+                  type="text"
+                  value={taskNameDraft}
+                  onChange={(e) => setTaskNameDraft(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleUpdateTaskName(); } }}
+                  className="task-input"
+                  placeholder="Enter task name..."
+                />
+              </div>
+              <button
+                type="button"
+                className="btn-update-prompt"
+                onClick={handleUpdateTaskName}
+              >
+                💾 Update Task Name
+              </button>
+            </div>
+
+            <div className="config-section">
+              <h3 className="section-title">Chatbot Display Name</h3>
+              <div className="setting-group full-width">
+                <input
+                  type="text"
+                  value={chatbotNameDraft}
+                  onChange={(e) => setChatbotNameDraft(e.target.value)}
+                  className="task-input"
+                  placeholder="Enter chatbot display name (e.g., Alex, Helper, Assistant)..."
+                />
+              </div>
+              <button
+                type="button"
+                className="btn-update-prompt"
+                onClick={handleUpdateChatbotName}
+              >
+                💾 Update Chatbot Display Name
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* System Prompt and Task Prompt Top-Down */}
         {activeTask && (
           <div className="prompts-container">
             <div className="config-section prompt-section">
