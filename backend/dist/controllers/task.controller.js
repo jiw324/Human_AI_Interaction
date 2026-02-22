@@ -16,7 +16,8 @@ const transformTaskFromDB = (dbTask) => {
         settings: {
             systemPrompt: dbTask.system_prompt,
             taskPrompt: dbTask.task_prompt || '',
-            defaultModel: dbTask.default_model || ''
+            defaultModel: dbTask.default_model || '',
+            chatbotName: dbTask.chatbot_name || ''
         }
     };
 };
@@ -116,14 +117,15 @@ const createTask = async (req, res) => {
         }
         const taskId = (0, uuid_1.v4)();
         // Insert new task
-        await database_1.default.query(`INSERT INTO tasks (id, user_id, name, system_prompt, task_prompt, default_model)
-       VALUES (?, ?, ?, ?, ?, ?)`, [
+        await database_1.default.query(`INSERT INTO tasks (id, user_id, name, system_prompt, task_prompt, default_model, chatbot_name)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`, [
             taskId,
             userId,
             name,
             settings.systemPrompt || 'You are a helpful AI assistant.',
             settings.taskPrompt || '',
-            settings.defaultModel || ''
+            settings.defaultModel || '',
+            settings.chatbotName || ''
         ]);
         // Fetch the created task
         const createdTask = await database_1.default.queryOne(`SELECT * FROM tasks WHERE id = ?`, [taskId]);
@@ -206,6 +208,10 @@ const updateTask = async (req, res) => {
             if (settings.defaultModel !== undefined) {
                 updates.push('default_model = ?');
                 values.push(settings.defaultModel);
+            }
+            if (settings.chatbotName !== undefined) {
+                updates.push('chatbot_name = ?');
+                values.push(settings.chatbotName);
             }
         }
         if (updates.length === 0) {
