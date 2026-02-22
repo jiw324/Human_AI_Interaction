@@ -173,18 +173,24 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation, studyId })
       }
       
       // No localStorage data - start new conversation with TaskPrompt
+      // Skip if no tasks are available (avoid caching an empty-task state)
+      if (tasks.length === 0) {
+        setIsLoadingMessages(false);
+        return;
+      }
+
       const newConversationId = uuidv4();
       const creationTime = new Date(); // Set creation time once
-      
+
       setConversationId(newConversationId);
       setConversationCreatedAt(creationTime); // Store creation time
       console.log('🆕 Starting new conversation with ID:', newConversationId);
       console.log('🕒 Conversation created at:', creationTime.toLocaleString());
-      
+
       // Use current task prompt as greeting
       const greeting = currentSettings.taskPrompt || `Hello! You are chatting with ${selectedModel.name}. How can I help you today?`;
       console.log('📝 Using task prompt as initial greeting:', greeting);
-      
+
       setMessages([
         {
           id: uuidv4(),
@@ -209,7 +215,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation, studyId })
 
   // Save current chat to localStorage whenever messages change
   useEffect(() => {
-    if (conversationId && messages.length > 0) {
+    if (conversationId && messages.length > 0 && tasks.length > 0) {
       const conversation = {
         id: conversationId,
         title: `Chat with ${selectedModel.name}`,
