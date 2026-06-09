@@ -1,3 +1,6 @@
+// Chat routes — send a message and get a single AI reply, or stream one
+// word-by-word over SSE. No auth: participants chat without an account.
+// Mounted at /api/chat in server.ts.
 import { Router } from 'express';
 import { sendMessage, streamMessage } from '../controllers/chat.controller';
 

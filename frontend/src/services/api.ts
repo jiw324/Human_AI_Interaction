@@ -1,3 +1,12 @@
+/**
+ * Central API client for the backend (mirrors backend/src/types & routes).
+ * Every domain — auth, chat, settings, conversations, tasks, admin,
+ * research groups, health — gets its own small object of async functions
+ * that wrap `fetchAPI`/`fetch` and normalize errors to safe fallback
+ * values (null/false/[]) so calling components don't need try/catch.
+ * `authService`/`adminAuthService` own JWT storage and auto-inject the
+ * bearer token on every request.
+ */
 // API Service for backend communication
 // In production, default to the commresearch-dev host (or override with VITE_API_URL).
 // In development, default to the local backend on port 3001 (or override with VITE_API_URL).
@@ -421,7 +430,9 @@ export const tasksAPI = {
         return data.data;
       }
       
-      // Throw error with backend message
+      // Unlike the other tasksAPI methods (which return null on failure),
+      // create() throws so the caller (ResearchPanel) can surface the
+      // backend's specific message — e.g. "task name already exists".
       const errorMessage = data.message || 'Failed to create task';
       console.warn('⚠️ Failed to create task:', errorMessage);
       throw new Error(errorMessage);

@@ -1,9 +1,17 @@
+/**
+ * Researcher authentication: exchanges a `research_key` for a JWT, and
+ * verifies an existing token. Mounted at /api/auth (see auth.routes.ts).
+ * Unlike admin auth, the key is checked against the `users` table, not
+ * an environment variable.
+ */
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { AuthRequest, AuthResponse } from '../types';
 import { AppError } from '../middleware/error.middleware';
 import db from '../config/database';
 
+// POST /api/auth/login — looks up an active user by research_key and
+// issues a 24h JWT containing their id/username/email.
 export const login = async (
   req: Request<{}, {}, AuthRequest>,
   res: Response<AuthResponse>,
@@ -59,6 +67,8 @@ export const login = async (
   }
 };
 
+// GET /api/auth/verify — gated by the `authenticate` middleware, so simply
+// reaching this handler proves the bearer token is valid.
 export const verify = async (
   _req: Request,
   res: Response,

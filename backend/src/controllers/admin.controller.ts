@@ -1,3 +1,9 @@
+/**
+ * Admin dashboard API: a separate auth path (ADMIN_KEY, not a user account)
+ * for managing researchers and inspecting all conversations/messages across
+ * the platform. Routes are protected by `requireAdmin` (see admin.routes.ts),
+ * except `adminLogin` itself which issues the admin JWT.
+ */
 import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';

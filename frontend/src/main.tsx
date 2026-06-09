@@ -1,3 +1,5 @@
+// Frontend entry point: mounts the React app into #root, wrapped in
+// HashRouter (see comment below) and StrictMode.
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { HashRouter } from 'react-router-dom'

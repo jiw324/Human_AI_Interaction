@@ -1,8 +1,11 @@
 /**
  * Configuration Types
- * TypeScript interfaces for system configuration
+ * TypeScript interfaces for the generic key/value `configs` table
+ * (`ConfigRow`/`ConfigUpdateDTO`) and the typed view of LiteLLM-related
+ * settings (`LiteLLMConfig`) used by config.service.ts.
  */
 
+// One row of the `configs` table — generic key/value config storage.
 export interface ConfigRow {
   config_id: number;
   key: string;
@@ -18,6 +21,8 @@ export interface ConfigUpdateDTO {
   description?: string;
 }
 
+// Structured, typed view over the LITELLM_*/​*_API_KEY rows in `configs`,
+// assembled by configService.getLiteLLMConfig().
 export interface LiteLLMConfig {
   apiBaseUrl: string;
   apiKey?: string;

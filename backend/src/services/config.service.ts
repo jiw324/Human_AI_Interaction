@@ -1,6 +1,10 @@
 /**
  * Configuration Service
- * Manages system configuration stored in the database
+ * Manages system configuration stored in the database as a flat
+ * key/value table (`configs`): provider API keys, the LiteLLM base URL,
+ * default model, admin key, etc. `getLiteLLMConfig`/`updateLiteLLMConfig`
+ * provide a typed view over the subset of keys the LiteLLM controller
+ * cares about; everything else goes through the generic get/set methods.
  */
 
 import { query } from '../config/database';
@@ -137,6 +141,9 @@ class ConfigService {
   async set(key: string, value: string, description?: string): Promise<ConfigRow> {
     const existing = await this.getByKey(key);
 
+    // Upsert: update in place if the key exists, otherwise insert. Doing
+    // a SELECT first (rather than INSERT ... ON DUPLICATE KEY) lets us
+    // preserve the existing description when none is supplied (COALESCE).
     if (existing) {
       // Update existing config
       const sql = `

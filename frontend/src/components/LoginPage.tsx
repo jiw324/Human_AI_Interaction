@@ -1,3 +1,8 @@
+/**
+ * Researcher login screen — collects a research key, exchanges it for a
+ * JWT via `authAPI.login`, and notifies the parent (`App`) on success so
+ * it can flip `isLoggedIn` and redirect into the research panel.
+ */
 import React, { useState } from 'react';
 import './LoginPage.css';
 import { authAPI } from '../services/api';

@@ -1,3 +1,10 @@
+/**
+ * Shared backend type definitions for chat/conversation/auth payloads.
+ * These mirror the shapes the frontend sends and expects — keep them in
+ * sync with `frontend/src/services/api.ts` and the database row shapes
+ * in `database.types.ts` (controllers translate between the two).
+ */
+
 export interface Message {
   id: string;
   text: string;
@@ -14,6 +21,8 @@ export interface AIModel {
   icon?: string;
 }
 
+// Per-model AI behavior config: systemPrompt drives the AI's persona,
+// taskPrompt is shown to the participant as the task description/greeting.
 export interface AISettings {
   systemPrompt: string;
   taskPrompt: string;

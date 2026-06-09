@@ -1,3 +1,13 @@
+/**
+ * Participant chat UI for a single study (`/study/:userId`). On first
+ * visit it randomly assigns one of the researcher's tasks as the active
+ * persona, persists the running conversation to localStorage (keyed by
+ * `studyId`) for resilience across reloads, and debounce-syncs it to the
+ * backend via `onSaveConversation` (provided by `StudyChatPage` in
+ * App.tsx) so it shows up in the researcher's history. AI replies come
+ * from `chatAPI.sendMessage`, which forwards to the LiteLLM-backed
+ * /api/chat/message endpoint.
+ */
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import './ChatBox.css';
@@ -80,7 +90,10 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation, studyId })
         console.error('Error parsing saved chat:', error);
       }
     }
-    // Randomly select a task for first-time users
+    // First-time visitor (no saved chat for this study): randomly assign
+    // one of the researcher's tasks as the persona for this session —
+    // ensures participants are spread across conditions without a
+    // separate randomization service.
     if (tasks.length > 0) {
       const randomIndex = Math.floor(Math.random() * tasks.length);
       const randomTask = tasks[randomIndex];
@@ -231,7 +244,9 @@ const ChatBox: React.FC<ChatBoxProps> = ({ tasks, onSaveConversation, studyId })
     }
   }, [messages, conversationId, selectedModel, currentGreeting]);
 
-  // Save conversation to history whenever messages change (debounced)
+  // Push the conversation to the backend (so it appears in the
+  // researcher's history) whenever messages settle, debounced by 1s so
+  // rapid back-and-forth exchanges don't trigger a save per message.
   useEffect(() => {
     // Only save if there are actual messages beyond the greeting AND conversation ID is set
     if (messages.length > 1 && conversationId) {

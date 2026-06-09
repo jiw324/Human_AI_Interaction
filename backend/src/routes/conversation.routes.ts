@@ -1,3 +1,7 @@
+// Conversation history routes. Reads/deletes require the researcher's
+// JWT, but saving is intentionally open so anonymous participants can
+// persist their chat under the researcher's user id. Mounted at
+// /api/conversations.
 import { Router } from 'express';
 import {
   getConversations,

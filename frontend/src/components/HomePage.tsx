@@ -1,3 +1,8 @@
+/**
+ * Public landing page — lists active research groups (fetched via
+ * `groupsAPI`, no auth required) with a search filter. Selecting a group
+ * navigates to /study/:userId, the participant chat for that researcher.
+ */
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { groupsAPI, type ResearchGroup } from '../services/api';

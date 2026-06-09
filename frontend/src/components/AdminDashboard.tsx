@@ -1,3 +1,11 @@
+/**
+ * Admin dashboard (/admin/:adminId) — protected by `adminAuthService`.
+ * Two tabs: "Researchers" (list/create/activate/delete user accounts via
+ * `adminAPI`) and "Conversations & Messages" (browse every conversation
+ * across all researchers, with lazy-loaded message threads on expand).
+ * Composed of small section components defined in this file rather than
+ * split across files since they're only ever used here together.
+ */
 import { useState, useEffect, useCallback } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import {

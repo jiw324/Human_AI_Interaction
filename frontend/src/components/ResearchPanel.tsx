@@ -1,3 +1,16 @@
+/**
+ * Researcher-facing task editor (login-protected). Lets a researcher
+ * create/rename/delete "tasks" (AI personas) and edit their settings —
+ * system prompt, task prompt, chatbot name, default model — persisting
+ * changes through `tasksAPI` and mirroring them into localStorage so the
+ * panel can repaint instantly without waiting on the network.
+ *
+ * Editing model: while the user types, edits live in local draft state
+ * (`editingSettings` / `*Draft`) rather than directly mutating `tasks`,
+ * so re-renders triggered by parent state updates don't reset the
+ * textarea cursor/focus mid-edit. Drafts are only committed to the
+ * backend (and `tasks`) when the corresponding "Update" button is clicked.
+ */
 import React, { useState, useRef, useEffect } from 'react';
 import { tasksAPI, authService, type Task } from '../services/api';
 import './ResearchPanel.css';
@@ -19,6 +32,7 @@ const ResearchPanel: React.FC<ResearchPanelProps> = ({ tasks, onTasksChange }) =
   const tasksCacheKey = `research_tasks_${authService.getUserId() ?? 'unknown'}`;
   const [activeTaskId, setActiveTaskId] = useState<string>(tasks[0]?.id || '');
   const [newTaskName, setNewTaskName] = useState<string>('');
+  // Guards against duplicate task creation from rapid double-clicks/re-renders.
   const isAddingTask = useRef(false);
   
   // Local editing state to prevent focus loss on most settings
@@ -88,9 +102,13 @@ const systemPromptRef = useRef<HTMLTextAreaElement>(null);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTaskId]);
 
+  // Stages a setting change locally (e.g. picking a new model from a
+  // dropdown) without writing to the backend — `currentSettings` reads
+  // from `editingSettings` first so the UI reflects the staged value
+  // until an explicit "Update" handler persists it.
   const handleSettingChange = (key: keyof AISettings, value: string | number | boolean) => {
     if (!activeTask) return;
-    
+
     // Update local editing state only (prevents re-render and focus loss)
     const newSettings = { ...currentSettings, [key]: value };
     setEditingSettings(newSettings);

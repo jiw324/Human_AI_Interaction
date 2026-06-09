@@ -1,3 +1,9 @@
+/**
+ * Chat message handling: builds the LiteLLM-formatted conversation
+ * (system prompt + history + new message), forwards it to the LiteLLM
+ * proxy, and returns the AI's reply either as a single JSON response
+ * (`sendMessage`) or as a simulated word-by-word SSE stream (`streamMessage`).
+ */
 import { Request, Response, NextFunction } from 'express';
 import { ChatRequest, ChatResponse, Message } from '../types';
 import { AppError } from '../middleware/error.middleware';
@@ -139,6 +145,8 @@ const generateAIResponse = async (
   }
 };
 
+// POST /api/chat/message — validates the request, gets a complete AI
+// reply from generateAIResponse, and returns it as JSON in one shot.
 export const sendMessage = async (
   req: Request<{}, {}, ChatRequest>,
   res: Response<ChatResponse>,
@@ -184,6 +192,9 @@ export const sendMessage = async (
   }
 };
 
+// POST /api/chat/stream — same generation as sendMessage, but the result
+// is chunked into words and pushed to the client over Server-Sent Events
+// (with an artificial delay) to mimic a typing/streaming effect.
 export const streamMessage = async (
   req: Request<{}, {}, ChatRequest>,
   res: Response,
@@ -207,7 +218,9 @@ export const streamMessage = async (
     // Generate response using LiteLLM
     const aiResponseText = await generateAIResponse(message, settings, messageHistory);
 
-    // Stream response word by word
+    // The AI call itself isn't streamed — we get the full text up front,
+    // then drip it out word-by-word so the frontend can render it as if
+    // it were arriving incrementally (SSE "data: {...}\n\n" framing).
     const words = aiResponseText.split(' ');
     for (let i = 0; i < words.length; i++) {
       const chunk = words[i] + (i < words.length - 1 ? ' ' : '');

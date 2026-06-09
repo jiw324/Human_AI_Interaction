@@ -1,3 +1,6 @@
+// Per-user, per-model AI settings routes (system prompt overrides, etc.).
+// All require a valid JWT since settings are scoped to the logged-in user.
+// Mounted at /api/settings in server.ts.
 import { Router } from 'express';
 import { getSettings, updateSettings, resetSettings } from '../controllers/settings.controller';
 import { authenticate } from '../middleware/auth.middleware';

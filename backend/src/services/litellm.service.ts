@@ -1,6 +1,9 @@
 /**
  * LiteLLM Service
- * Handles communication with LiteLLM proxy for AI model interactions
+ * Handles communication with LiteLLM proxy (or, if configured, directly
+ * with OpenAI) for listing models and running chat completions. Reads
+ * its base URL / API keys from `configService` (DB-backed config),
+ * falling back to environment variables in `sendChatCompletion`.
  */
 
 import axios, { AxiosError } from 'axios';
@@ -42,7 +45,8 @@ class LiteLLMService {
         return { success: false, error: 'LiteLLM API base URL not configured', models: [] };
       }
 
-      // Choose the right API key based on the base URL
+      // The configured base URL might point at the LiteLLM proxy or
+      // straight at OpenAI's API — each needs a different key.
       const isDirectOpenAI = baseUrl.includes('api.openai.com');
       const apiKey = isDirectOpenAI ? openaiApiKey : litellmApiKey;
 
@@ -151,8 +155,9 @@ class LiteLLMService {
         max_tokens: maxTokens || 1000,
       };
 
-      // Only add OpenAI-specific parameters for GPT models
-      // Claude, Gemini, DeepSeek, Nova, Llama, Mistral don't support these
+      // top_p / presence_penalty / frequency_penalty are OpenAI-specific
+      // sampling params; sending them to other providers via the proxy
+      // can cause request errors, so only attach them for GPT-family models.
       const modelLower = modelId.toLowerCase();
       const isGPTModel = (
         modelLower.startsWith('gpt-') || 

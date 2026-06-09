@@ -1,3 +1,9 @@
+/**
+ * Admin login screen — separate credential path from researcher accounts
+ * (an `ADMIN_KEY` rather than a per-user research key). On success it
+ * stores the admin JWT via `adminAuthService` and routes to
+ * /admin/:adminId (AdminDashboard).
+ */
 import { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { adminAPI, adminAuthService } from '../services/api';

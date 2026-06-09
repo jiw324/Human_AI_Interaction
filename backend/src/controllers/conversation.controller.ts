@@ -1,9 +1,17 @@
+/**
+ * CRUD for a user's saved conversations and their messages.
+ * All routes are scoped to a `userId` URL param; `saveConversation` does
+ * an upsert of the conversation row plus a REPLACE INTO of every message
+ * (so re-saving an existing conversation just overwrites in place).
+ */
 import { Request, Response, NextFunction } from 'express';
 import { Conversation } from '../types';
 import { AppError } from '../middleware/error.middleware';
 import db from '../config/database';
 
 
+// GET /api/conversations/:userId — list summaries (last message preview +
+// message count) rather than full message bodies, to keep payloads small.
 export const getConversations = async (
   req: Request<{ userId: string }>,
   res: Response,
@@ -81,6 +89,8 @@ export const getConversations = async (
   }
 };
 
+// GET /api/conversations/:userId/:conversationId — full conversation
+// including every message, ordered chronologically.
 export const getConversation = async (
   req: Request<{ userId: string; conversationId: string }>,
   res: Response,
@@ -144,7 +154,10 @@ export const getConversation = async (
   }
 };
 
-// Helper: format a Date as EST (America/New_York) in MySQL DATETIME format
+// Helper: format a Date as EST (America/New_York) in MySQL DATETIME format.
+// MySQL columns store naive datetimes, so timestamps are normalized to a
+// single timezone here to keep ordering/comparison consistent regardless
+// of the server's or client's local timezone.
 const formatAsESTDateTime = (date: Date) => {
   const estDate = new Date(
     date.toLocaleString('en-US', { timeZone: 'America/New_York' })
@@ -158,6 +171,9 @@ const formatAsESTDateTime = (date: Date) => {
   return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
 };
 
+// POST /api/conversations/:userId — upsert: updates the conversation row
+// if it exists (title/last_message_at only), otherwise inserts a new one,
+// then writes every message via REPLACE INTO so resaving is idempotent.
 export const saveConversation = async (
   req: Request<{ userId: string }, {}, Conversation>,
   res: Response,
@@ -242,6 +258,9 @@ export const saveConversation = async (
   }
 };
 
+// DELETE /api/conversations/:userId/:conversationId — relies on the
+// `user_id` match in the WHERE clause to prevent deleting another user's
+// conversation; affectedRows === 0 means "not found or not yours".
 export const deleteConversation = async (
   req: Request<{ userId: string; conversationId: string }>,
   res: Response,

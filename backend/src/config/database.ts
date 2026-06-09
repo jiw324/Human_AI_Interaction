@@ -1,3 +1,11 @@
+/**
+ * MySQL connection pool and query helpers shared across the backend.
+ *
+ * Exposes `query` / `queryOne` for parameterized statements, `transaction`
+ * for multi-statement atomic operations, and `testConnection` used at
+ * startup to verify the database is reachable. All controllers/services
+ * should go through these helpers rather than touching `pool` directly.
+ */
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
 
@@ -86,6 +94,8 @@ export const transaction = async <T>(
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
+    // Caller runs its own queries against `connection` so they share the
+    // same transaction context; commit/rollback happens here based on outcome.
     const result = await callback(connection);
     await connection.commit();
     return result;

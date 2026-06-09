@@ -1,3 +1,11 @@
+/**
+ * Researcher's conversation history browser (`/history/:userId`).
+ * Lets the researcher reload conversations from the database, drill into
+ * a single conversation's full message thread, search/filter, and export
+ * one, several (checkbox selection), or all conversations as CSV.
+ * Loading is manual (button-triggered) rather than on-mount to avoid
+ * refetch loops; `isLoadingRef` guards against overlapping requests.
+ */
 import React, { useState, useRef } from 'react';
 import { type Conversation, conversationsAPI, authService } from '../services/api';
 import { getDeviceId } from '../utils/deviceId';
@@ -92,7 +100,9 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
     }
   };
 
-  // Helper: convert conversations (with messages) to CSV text
+  // Helper: convert conversations (with messages) to CSV text.
+  // Each row is one message; JSON.stringify is reused as the CSV escaper
+  // since it quotes and escapes embedded quotes/commas/newlines for us.
   const conversationsToCsv = (convs: Conversation[]): string => {
     const header = [
       'conversation_id',

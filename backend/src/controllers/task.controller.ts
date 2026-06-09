@@ -1,9 +1,17 @@
+/**
+ * CRUD for "tasks" — the configurable AI personas/prompts a researcher
+ * sets up for participants to chat with. Most endpoints require
+ * `req.user` (set by `authenticate`) and scope queries to that user's
+ * own rows; `getResearchGroups`/`getTasksByUserId` are intentionally
+ * public so participants can reach a study via a shareable link.
+ */
 import { Request, Response } from 'express';
 import db from '../config/database';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
- * Transform database row to frontend format
+ * Maps a `tasks` table row (snake_case columns) to the camelCase shape
+ * the frontend expects, nesting the prompt/model fields under `settings`.
  */
 const transformTaskFromDB = (dbTask: any) => {
   return {
@@ -236,7 +244,8 @@ export const updateTask = async (req: Request, res: Response): Promise<void> => 
       }
     }
     
-    // Build update query
+    // Build the UPDATE column list dynamically so only fields actually
+    // present in the request body are touched (partial updates supported).
     const updates: string[] = [];
     const values: any[] = [];
     
@@ -396,7 +405,9 @@ export const getTasksByUserId = async (req: Request, res: Response): Promise<voi
 };
 
 /**
- * Delete a task (soft delete)
+ * Permanently delete a task owned by the authenticated user.
+ * (Despite the name in older docs, this is a hard delete — the row is
+ * removed from the database, not flagged inactive.)
  */
 export const deleteTask = async (req: Request, res: Response): Promise<void> => {
   try {

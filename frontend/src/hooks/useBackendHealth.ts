@@ -1,3 +1,10 @@
+/**
+ * Periodically pings GET /api/health and exposes { isOnline, lastChecked,
+ * error } so the UI can show a "backend unreachable" state. Checks are
+ * activity-debounced (60s after the last click/keypress/scroll/etc.)
+ * rather than on a fixed interval, so idle tabs don't keep polling —
+ * an initial check still fires immediately on mount for a fast first read.
+ */
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { API_BASE_URL } from '../services/api';
 

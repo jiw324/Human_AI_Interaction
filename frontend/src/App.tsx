@@ -1,3 +1,12 @@
+/**
+ * Root component: owns top-level auth/session state (`isLoggedIn`,
+ * `tasks`, `conversations`), wires up routing for the public home page,
+ * participant study chat, researcher panel/history, and the admin area,
+ * and renders the persistent nav bar. Page-level wrapper components
+ * below (`StudyChatPage`, `ResearchPanelPage`, `HistoryPage`) read the
+ * `:userId` route param and guard access before rendering the real
+ * feature components.
+ */
 import { useState, useEffect, useCallback } from 'react'
 import { Routes, Route, NavLink, useNavigate, Navigate, useParams, useLocation } from 'react-router-dom'
 import ChatBox from './components/ChatBox'
@@ -76,6 +85,9 @@ function ResearchPanelPage({
   const { userId } = useParams<{ userId: string }>();
   const currentUserId = authService.getUserId();
 
+  // Two guards: must be logged in at all, and the :userId in the URL
+  // must match the JWT's user — otherwise redirect to the correct one
+  // (prevents one researcher from viewing another's panel via the URL).
   if (!isLoggedIn) return <Navigate to="/research" replace />;
   if (userId !== currentUserId && currentUserId) {
     return <Navigate to={`/research/${currentUserId}`} replace />;
@@ -141,7 +153,9 @@ function App() {
     const cacheKey = userId ? `research_tasks_${userId}` : null;
     console.log('📡 Loading tasks for logged-in researcher...');
 
-    // Show cached tasks immediately while the fresh fetch is in flight
+    // Stale-while-revalidate: paint cached tasks immediately so the UI
+    // isn't empty during the network round trip, then replace with fresh
+    // data (or keep the cache if the fetch fails).
     if (cacheKey) {
       const cachedTasks = localStorage.getItem(cacheKey);
       if (cachedTasks) {
@@ -237,6 +251,9 @@ function App() {
     const researcherId = authService.getUserId();
     setConversations(prev => {
       const existingById = new Map(prev.map(conv => [conv.id, conv]));
+      // Keep the locally-known `createdAt` when we already have this
+      // conversation — the backend's value can drift slightly due to the
+      // EST normalization in conversation.controller.ts.
       const merged = loadedConversations.map(conv => {
         const existing = existingById.get(conv.id);
         return existing ? { ...conv, createdAt: existing.createdAt } : conv;

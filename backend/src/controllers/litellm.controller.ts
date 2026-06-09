@@ -1,6 +1,9 @@
 /**
  * LiteLLM Controller
- * API endpoints for LiteLLM configuration and model management
+ * API endpoints for LiteLLM configuration and model management.
+ * Reads/writes proxy settings (base URL, provider keys, default model)
+ * via `configService` and proxies model-list/connection checks to
+ * `liteLLMService`, which talks to the actual LiteLLM proxy.
  */
 
 import { Request, Response, NextFunction } from 'express';
@@ -61,7 +64,8 @@ export const liteLLMController = {
       
       const config = await configService.getLiteLLMConfig();
 
-      // Don't expose API keys in full, show only first few characters
+      // Truncate secrets before sending to the client — full keys never
+      // leave the server once stored.
       const sanitizedConfig = {
         apiBaseUrl: config.apiBaseUrl,
         apiKey: config.apiKey ? `${config.apiKey.substring(0, 4)}...` : '',

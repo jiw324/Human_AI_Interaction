@@ -1,3 +1,6 @@
+// Task ("AI persona") routes — split into public routes used by
+// participants reaching a study via a shareable link, and JWT-protected
+// CRUD routes used by the researcher's panel. Mounted at /api/tasks.
 import { Router } from 'express';
 import {
   getAllTasks,

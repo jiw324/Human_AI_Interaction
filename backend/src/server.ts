@@ -1,3 +1,11 @@
+/**
+ * Express application entry point.
+ *
+ * Sets up global middleware (security headers, CORS, logging, body parsing),
+ * mounts every API route module under /api/*, and registers the 404 and
+ * global error handlers. On startup it also verifies the MySQL connection
+ * and ensures baseline system configuration rows exist.
+ */
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -33,6 +41,8 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').map(o => o.trim()
 ];
 
 app.use(cors({
+  // Custom origin check (instead of a static array) so we can special-case
+  // "no origin" requests and relax the rule for localhost during development.
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps, Postman, or same-origin)
     if (!origin) return callback(null, true);
@@ -95,7 +105,7 @@ app.use((req, res) => {
 // Error handler (must be last)
 app.use(errorHandler);
 
-// Start server
+// Start server. Binding to '::' listens on both IPv6 and IPv4 (dual-stack).
 app.listen(PORT, '::', async () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);

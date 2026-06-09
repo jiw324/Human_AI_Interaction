@@ -6,7 +6,9 @@
       "Bash(curl:*)",
       "Bash(npm run build:*)",
       "Bash(python3:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(findstr -i \"integration guide\")",
+      "Bash(findstr -i readme)"
     ]
   }
 }

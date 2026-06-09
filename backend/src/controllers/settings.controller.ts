@@ -1,10 +1,20 @@
+/**
+ * Per-user, per-model AI chat settings (system prompt, etc.).
+ *
+ * NOTE: storage is an in-memory Map, so settings are lost on server
+ * restart and are not shared across server instances — fine for a
+ * single-process dev/research deployment, but would need to move to
+ * the database for production scale-out.
+ */
 import { Request, Response, NextFunction } from 'express';
 import { AISettings } from '../types';
 import { AppError } from '../middleware/error.middleware';
 
-// In-memory storage for settings (replace with database in production)
+// userId -> (modelName -> settings)
 const settingsStore: Map<string, Record<string, AISettings>> = new Map();
 
+// GET /api/settings/:userId — returns all per-model settings for a user,
+// or an empty object if none have been saved yet.
 export const getSettings = async (
   req: Request<{ userId: string }>,
   res: Response,
@@ -28,6 +38,8 @@ export const getSettings = async (
   }
 };
 
+// PUT /api/settings/:userId/:modelName — replaces the settings for one
+// model; requires a non-empty systemPrompt since that drives AI behavior.
 export const updateSettings = async (
   req: Request<{ userId: string; modelName: string }, {}, AISettings>,
   res: Response,
@@ -61,6 +73,8 @@ export const updateSettings = async (
   }
 };
 
+// DELETE /api/settings/:userId/:modelName — removes any saved override so
+// the model falls back to its default settings.
 export const resetSettings = async (
   req: Request<{ userId: string; modelName: string }>,
   res: Response,

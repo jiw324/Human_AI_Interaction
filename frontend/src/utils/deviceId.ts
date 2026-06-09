@@ -2,6 +2,13 @@
  * Device ID Management
  * Generates a unique ID based on device fingerprint
  * Uses device characteristics to create consistent ID across sessions
+ *
+ * Anonymous study participants never log in, so this is the only stable
+ * identity tying their conversations together across visits/reloads.
+ * `getDeviceId` resolves it through a 3-tier fallback, preferring whichever
+ * still works: localStorage (fastest, but cleared by some browsers/privacy
+ * modes) -> IndexedDB (survives localStorage clears) -> freshly generated
+ * fingerprint hash (last resort if both stores are empty/unavailable).
  */
 
 const DEVICE_ID_KEY = 'device_unique_id';

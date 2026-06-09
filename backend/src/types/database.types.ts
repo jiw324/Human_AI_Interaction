@@ -1,6 +1,11 @@
 // ============================================
 // Database Type Definitions
 // Core Tables Only (Simplified Version)
+//
+// Snake_case interfaces mirroring `schema.sql` row shapes, plus the
+// request/response DTOs and stored-procedure parameter types built on
+// top of them. Controllers map these to the camelCase shapes in
+// `types/index.ts` before sending JSON to the frontend.
 // ============================================
 
 export interface User {

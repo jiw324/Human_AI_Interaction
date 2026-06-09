@@ -1,8 +1,12 @@
 /**
  * LiteLLM Types
- * TypeScript interfaces for LiteLLM service
+ * TypeScript interfaces mirroring the OpenAI-compatible request/response
+ * shapes the LiteLLM proxy speaks (`/v1/models`, `/v1/chat/completions`),
+ * plus the lightweight wrapper response types (`ModelsListResponse`,
+ * `ChatCompletionResponse`) that litellm.service.ts returns to callers.
  */
 
+// A single chat turn in LiteLLM/OpenAI's message format.
 export interface LiteLLMMessage {
   role: 'system' | 'user' | 'assistant';
   content: string;

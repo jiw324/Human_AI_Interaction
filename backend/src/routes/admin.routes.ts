@@ -1,3 +1,6 @@
+// Admin dashboard routes — separate auth path from researcher accounts
+// (ADMIN_KEY → admin JWT via `requireAdmin`). Lets an administrator manage
+// researcher accounts and inspect any conversation. Mounted at /api/admin.
 import { Router } from 'express';
 import {
   adminLogin,

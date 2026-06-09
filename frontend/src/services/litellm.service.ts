@@ -1,6 +1,13 @@
 /**
  * LiteLLM Service
- * Frontend service for LiteLLM configuration and model management
+ * Frontend wrapper around the /api/litellm/* endpoints (list models,
+ * read/update proxy config, test connection) for a settings/admin UI.
+ *
+ * NOTE: nothing in the current components imports this module — it
+ * duplicates the auth-aware fetch wrapper already in services/api.ts.
+ * Kept here for any future LiteLLM configuration screen; if one is
+ * added, prefer routing through api.ts's `fetchAPI` instead of the
+ * separate `fetchAPI` defined below to avoid drift between the two.
  */
 
 const API_BASE_URL =

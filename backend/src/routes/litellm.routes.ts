@@ -1,6 +1,8 @@
 /**
  * LiteLLM Routes
- * API routes for LiteLLM integration
+ * API routes for LiteLLM integration: browsing models (public) and
+ * managing the proxy configuration / connection test (researcher-only,
+ * since the config includes provider API keys). Mounted at /api/litellm.
  */
 
 import { Router } from 'express';
